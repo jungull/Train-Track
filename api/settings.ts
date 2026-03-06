@@ -3,7 +3,7 @@ import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
-        const supabase = getSupabase();
+        const supabase = await getSupabase();
         if (req.method === 'GET') {
             const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
             if (error) return res.status(500).json({ error: error.message, hint: 'Supabase query failed', code: error.code });

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const supabase = getSupabase();
+    const supabase = await getSupabase();
     // GET /api/program → list all days
     if (req.method === 'GET') {
         const { data, error } = await supabase.from('program_days').select('*').order('weekday', { ascending: true });
