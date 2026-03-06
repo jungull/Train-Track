@@ -1,0 +1,5 @@
+{
+  "name": "Fitness Logger",
+  "description": "An iPhone-first fitness logging app that tracks workouts, bodyweight, and provides GTG reminders.",
+  "requestFramePermissions": []
+}
