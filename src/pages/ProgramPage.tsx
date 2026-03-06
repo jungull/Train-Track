@@ -404,7 +404,7 @@ export default function ProgramPage() {
   const handleSave = async (day: any) => {
     setSaving(true);
     try {
-      await fetch(`/api/program/${day.weekday}`, {
+      await fetch(`/api/program?weekday=${day.weekday}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -66,10 +66,10 @@ export default function TodayPage() {
       setLoading(true);
       try {
         const [todayRes, programRes, recentRes, e1rmRes] = await Promise.all([
-          fetch(`/api/sessions/${dateStr}`),
+          fetch(`/api/sessions?date=${dateStr}`),
           fetch('/api/program'),
-          fetch('/api/recent-exercises'),
-          fetch('/api/best-1rm')
+          fetch('/api/exercises?type=recent'),
+          fetch('/api/exercises?type=best1rm')
         ]);
 
         const todayData = await todayRes.json();

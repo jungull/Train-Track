@@ -51,8 +51,8 @@ function DotStrip({ completed, target }: { completed: number; target: number }) 
                 <div
                     key={i}
                     className={`w-4 h-4 rounded-full transition-all duration-300 ${i < completed
-                            ? 'bg-green-500 shadow-sm shadow-green-200 scale-110'
-                            : 'bg-zinc-200'
+                        ? 'bg-green-500 shadow-sm shadow-green-200 scale-110'
+                        : 'bg-zinc-200'
                         }`}
                 />
             ))}
@@ -182,8 +182,8 @@ function PushupCard({
                     onClick={handleStartSet}
                     disabled={onCooldown}
                     className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] ${onCooldown
-                            ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                            : 'bg-zinc-950 text-white shadow-lg shadow-zinc-900/20'
+                        ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                        : 'bg-zinc-950 text-white shadow-lg shadow-zinc-900/20'
                         }`}
                 >
                     {onCooldown ? (
@@ -360,8 +360,8 @@ function PlankCard({
                     onClick={handleBegin}
                     disabled={onCooldown}
                     className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] ${onCooldown
-                            ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                            : 'bg-zinc-950 text-white shadow-lg shadow-zinc-900/20'
+                        ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                        : 'bg-zinc-950 text-white shadow-lg shadow-zinc-900/20'
                         }`}
                 >
                     {onCooldown ? (
@@ -381,7 +381,7 @@ function HabitCalendar() {
     const [history, setHistory] = useState<any[]>([]);
 
     useEffect(() => {
-        fetch('/api/gtg-history').then(r => r.json()).then(setHistory).catch(console.error);
+        fetch('/api/gtg?history=1').then(r => r.json()).then(setHistory).catch(console.error);
     }, []);
 
     const start = startOfMonth(month);
@@ -462,7 +462,7 @@ export default function GTGPage() {
         try {
             const [sRes, eRes] = await Promise.all([
                 fetch('/api/settings'),
-                fetch(`/api/gtg/${todayStr}`),
+                fetch(`/api/gtg?date=${todayStr}`),
             ]);
             setSettings(await sRes.json());
             setEvents(await eRes.json());
@@ -489,7 +489,7 @@ export default function GTGPage() {
             }),
         });
         // Refresh events
-        const res = await fetch(`/api/gtg/${todayStr}`);
+        const res = await fetch(`/api/gtg?date=${todayStr}`);
         setEvents(await res.json());
     };
 

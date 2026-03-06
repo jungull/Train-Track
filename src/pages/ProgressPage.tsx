@@ -34,7 +34,7 @@ export default function ProgressPage() {
 
   const fetchLog = async () => {
     try {
-      const res = await fetch('/api/exercise-log');
+      const res = await fetch('/api/exercises?type=log');
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -55,7 +55,7 @@ export default function ProgressPage() {
     }
 
     try {
-      await fetch('/api/exercises/rename', {
+      await fetch('/api/rename', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ oldName, newName: editName.trim() }),
