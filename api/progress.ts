@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './_lib/supabase';
+import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+    const supabase = getSupabase();
 
     const [sessionsRes, setRes, runRes, gtgRes] = await Promise.all([
         supabase.from('sessions').select('*').order('date', { ascending: true }),

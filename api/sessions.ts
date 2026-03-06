@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './_lib/supabase';
+import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    const supabase = getSupabase();
     // GET /api/sessions?date=2024-01-15 → fetch one session
     if (req.method === 'GET') {
         const date = req.query.date as string;

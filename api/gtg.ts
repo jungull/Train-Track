@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './_lib/supabase';
+import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    const supabase = getSupabase();
     // POST /api/gtg → log a GTG event
     if (req.method === 'POST') {
         const { type, date, timestamp, target, completed, source } = req.body;

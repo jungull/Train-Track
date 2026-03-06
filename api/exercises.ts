@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './_lib/supabase';
+import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    const supabase = getSupabase();
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
     const type = req.query.type as string || 'recent';

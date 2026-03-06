@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './_lib/supabase';
+import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    const supabase = getSupabase();
 
     const { oldName, newName } = req.body;
     if (!oldName || !newName) return res.status(400).json({ error: 'oldName and newName required' });
