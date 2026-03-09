@@ -1,36 +1,54 @@
+```typescript
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const supabase = await getSupabase();
-    // POST /api/gtg → log a GTG event
-    if (req.method === 'POST') {
-        const { type, date, timestamp, target, completed, source } = req.body;
-        const { error } = await supabase.from('gtg_events').insert({
-            type, date, timestamp, target, completed, source,
+    try {
+        const supabase = await getSupabase();
+
+        if (req.method === 'GET') {
+            const dateStr = req.query.date as string;
+            const history = req.query.history === '1';
+
+            if (history) {
+                // Aggregated GTG history
+                // Note: Supabase `sum()` aggregation requires a specific setup or RLS policy
+                // This query attempts to use `sum()` directly.
+                // If `completed.sum()` doesn't work as expected, you might need a view or a different approach.
+                const { data, error } = await supabase.from('gtg_events')
+                    .select('date, type, sum(completed) as total_volume, count(id) as sets_completed') // Added count(id) for sets_completed
+                    .order('date', { ascending: false })
+                    .group('date, type'); // Group by date and type for aggregation
+                if (error) throw error;
+                return res.json(data);
+            }
+
+            if (dateStr) {
+                const { data, error } = await supabase.from('gtg_events')
+                    .select('*')
+                    .eq('date', dateStr);
+                if (error) throw error;
+                return res.json(data || []);
+            }
+
+            return res.status(400).json({ error: 'date or history query param required' });
+        }
+
+        if (req.method === 'POST') {
+            const { type, date, timestamp, target, completed, source } = req.body;
+            const { error } = await supabase.from('gtg_events').insert({
+                type, date, timestamp, target, completed, source
+            });
+            if (error) throw error;
+            return res.json({ success: true });
+        }
+
+        res.status(405).json({ error: 'Method not allowed' });
+    } catch (err: any) {
+        res.status(500).json({ 
+            error: err.message || err, 
+            diagnostic: 'Standardized try/catch in gtg.ts' 
         });
-        if (error) return res.status(500).json({ error: error.message });
-        return res.json({ success: true });
-    }
-
-    // GET /api/gtg?date=2024-01-15 → events for a date
-    // GET /api/gtg?history=1 → aggregated history
-    if (req.method === 'GET') {
-        const date = req.query.date as string;
-        const history = req.query.history as string;
-
-        if (history) {
-            // Aggregated GTG history
-            const { data: raw } = await supabase
-                .from('gtg_events')
-                .select('*')
-                .eq('source', 'app')
-                .gt('completed', 0)
-                .order('date', { ascending: false });
-
-            const grouped: Record<string, any> = {};
-            for (const row of raw || []) {
-                const key = `${row.date}-${row.type}`;
                 if (!grouped[key]) {
                     grouped[key] = { date: row.date, type: row.type, sets_completed: 0, total_volume: 0 };
                 }

@@ -6,7 +6,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const supabase = await getSupabase();
         if (req.method === 'GET') {
             const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
-            if (error) return res.status(500).json({ error: error.message, hint: 'Supabase query failed', code: error.code });
+            if (error) throw error;
             return res.json(data);
         }
 
@@ -31,18 +31,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 gtg_pushup_enabled: b.gtg_pushup_enabled ?? 1,
                 gtg_plank_enabled: b.gtg_plank_enabled ?? 1,
             }).eq('id', 1);
-            if (error) return res.status(500).json({ error: error.message });
+            if (error) throw error;
             return res.json({ success: true });
         }
 
         res.status(405).json({ error: 'Method not allowed' });
     } catch (err: any) {
         res.status(500).json({
-            error: err.message,
-            env_check: {
-                has_url: !!process.env.SUPABASE_URL,
-                has_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-            }
+            error: err.message || err,
+            diagnostic: 'Standardized try/catch in settings.ts'
         });
     }
 }

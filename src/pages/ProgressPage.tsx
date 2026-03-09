@@ -34,9 +34,17 @@ export default function ProgressPage() {
 
   const fetchLog = async () => {
     try {
-      const res = await fetch('/api/exercises?type=log');
-      const json = await res.json();
-      setData(json);
+      const res = await fetch('/api/progress');
+      const { sessions, set_entries } = await res.json();
+
+      // Join date from sessions into set_entries
+      const sessionMap = Object.fromEntries(sessions.map((s: any) => [s.id, s.date]));
+      const joinedData = set_entries.map((e: any) => ({
+        ...e,
+        date: sessionMap[e.session_id] || 'Unknown'
+      }));
+
+      setData(joinedData);
     } catch (err) {
       console.error(err);
     } finally {

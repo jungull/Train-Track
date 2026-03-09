@@ -65,17 +65,46 @@ export default function TodayPage() {
     async function fetchData() {
       setLoading(true);
       try {
-        const [todayRes, programRes, recentRes, e1rmRes] = await Promise.all([
+        const [todayRes, programRes, progressRes] = await Promise.all([
           fetch(`/api/sessions?date=${dateStr}`),
           fetch('/api/program'),
-          fetch('/api/exercises?type=recent'),
-          fetch('/api/exercises?type=best1rm')
+          fetch('/api/progress')
         ]);
 
         const todayData = await todayRes.json();
         const programData = await programRes.json();
-        const recentData = await recentRes.json();
-        const best1rmData: Record<string, number> = await e1rmRes.json();
+        const progressData = await progressRes.json();
+
+        const sessions = progressData.sessions || [];
+        const setEntries = progressData.set_entries || [];
+
+        // 1. Compute best1rmData
+        const best1rmData: Record<string, number> = {};
+        for (const row of setEntries) {
+          if (row.weight > 0 && row.reps > 0) {
+            const e1rm = row.weight * (1 + row.reps / 30);
+            if (!best1rmData[row.exercise_name] || e1rm > best1rmData[row.exercise_name]) {
+              best1rmData[row.exercise_name] = Math.round(e1rm * 10) / 10;
+            }
+          }
+        }
+
+        // 2. Compute recentExercises (most recent set per exercise)
+        const sessionMap = Object.fromEntries(sessions.map((s: any) => [s.id, s.date]));
+        const sortedEntries = [...setEntries].sort((a, b) => (b.id - a.id));
+        const seen = new Set<string>();
+        const recentData: any[] = [];
+        for (const row of sortedEntries) {
+          if (!seen.has(row.exercise_name)) {
+            seen.add(row.exercise_name);
+            recentData.push({
+              exercise_name: row.exercise_name,
+              weight: row.weight,
+              reps: row.reps,
+              date: sessionMap[row.session_id] || 'Unknown'
+            });
+          }
+        }
 
         const todayProgram = programData.find((p: any) => p.weekday === weekday);
         if (todayProgram && todayProgram.exercises) {
