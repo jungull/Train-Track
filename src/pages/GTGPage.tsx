@@ -68,10 +68,10 @@ function PushupCard({
 }: {
     settings: Settings;
     events: GTGEvent[];
-    onLog: (type: string, target: number, actual: number) => void;
+    onLog: (type: string, target: number, actual: number) => Promise<void>;
 }) {
     const scheduledTarget = calcTarget(settings.pushup_start_reps, settings.pushup_weekly_add, settings.program_start_date);
-    const completedSets = events.filter(e => e.type === 'pushups' && e.source === 'app' && e.completed > 0);
+    const completedSets = events.filter(e => e.type === 'pushups' && e.completed > 0);
 
     // Day-override: if any set was below target, use that as the new target for remaining sets
     const [overrideTarget, setOverrideTarget] = useState<number | null>(null);
@@ -98,8 +98,8 @@ function PushupCard({
         setShowPrompt(true);
     };
 
-    const handleYes = () => {
-        onLog('pushups', todayTarget, todayTarget);
+    const handleYes = async () => {
+        await onLog('pushups', todayTarget, todayTarget);
         setShowPrompt(false);
         beep(660, 200);
     };
@@ -110,10 +110,10 @@ function PushupCard({
         setActualReps('');
     };
 
-    const handleSubmitActual = () => {
+    const handleSubmitActual = async () => {
         const actual = parseInt(actualReps) || 0;
         if (actual > 0) {
-            onLog('pushups', todayTarget, actual);
+            await onLog('pushups', todayTarget, actual);
             if (actual < todayTarget) setOverrideTarget(actual);
         }
         setShowInput(false);
@@ -205,10 +205,10 @@ function PlankCard({
 }: {
     settings: Settings;
     events: GTGEvent[];
-    onLog: (type: string, target: number, actual: number) => void;
+    onLog: (type: string, target: number, actual: number) => Promise<void>;
 }) {
     const scheduledTarget = calcTarget(settings.plank_start_sec, settings.plank_weekly_add, settings.program_start_date);
-    const completedSets = events.filter(e => e.type === 'planks' && e.source === 'app' && e.completed > 0);
+    const completedSets = events.filter(e => e.type === 'planks' && e.completed > 0);
 
     const [overrideTarget, setOverrideTarget] = useState<number | null>(null);
     const todayTarget = overrideTarget ?? scheduledTarget;
@@ -268,10 +268,10 @@ function PlankCard({
         beep(440, 200);
     };
 
-    const handleSubmitResult = () => {
+    const handleSubmitResult = async () => {
         const actual = parseInt(actualSeconds) || 0;
         if (actual > 0) {
-            onLog('planks', todayTarget, actual);
+            await onLog('planks', todayTarget, actual);
             if (actual < todayTarget) setOverrideTarget(actual);
         }
         setShowResult(false);
