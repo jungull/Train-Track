@@ -56,6 +56,10 @@ export default function TodayPage() {
   const [program, setProgram] = useState<any>(null);
   const [recentExercises, setRecentExercises] = useState<any[]>([]);
   const [bodyweight, setBodyweight] = useState('');
+  const [waistCircumference, setWaistCircumference] = useState('');
+  const [proteinGrams, setProteinGrams] = useState('');
+  const [carbGrams, setCarbGrams] = useState('');
+  const [fatGrams, setFatGrams] = useState('');
   const [loading, setLoading] = useState(true);
 
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -115,7 +119,11 @@ export default function TodayPage() {
 
         if (todayData) {
           setSession(todayData);
-          if (todayData.bodyweight) setBodyweight(todayData.bodyweight.toString());
+          setBodyweight(todayData.bodyweight ? todayData.bodyweight.toString() : '');
+          setWaistCircumference(todayData.waist_circumference ? todayData.waist_circumference.toString() : '');
+          setProteinGrams(todayData.calories_protein ? String(Math.round(todayData.calories_protein / 4)) : '');
+          setCarbGrams(todayData.calories_carbs ? String(Math.round(todayData.calories_carbs / 4)) : '');
+          setFatGrams(todayData.calories_fats ? String(Math.round(todayData.calories_fats / 9)) : '');
         } else {
           // Initialize empty session with program exercises + smart weight pre-fill
           const initialSets: any[] = [];
@@ -169,7 +177,17 @@ export default function TodayPage() {
             }
           }
 
-          setSession({ date: dateStr, weekday, set_entries: initialSets, run_entries: [], emom_entries: [] });
+          setSession({
+            date: dateStr,
+            weekday,
+            waist_circumference: null,
+            calories_protein: null,
+            calories_carbs: null,
+            calories_fats: null,
+            set_entries: initialSets,
+            run_entries: [],
+            emom_entries: []
+          });
         }
       } catch (err) {
         console.error(err);
@@ -188,6 +206,10 @@ export default function TodayPage() {
         body: JSON.stringify({
           ...session,
           bodyweight: parseFloat(bodyweight) || null,
+          waist_circumference: parseFloat(waistCircumference) || null,
+          calories_protein: (parseInt(proteinGrams) || 0) > 0 ? (parseInt(proteinGrams) || 0) * 4 : null,
+          calories_carbs: (parseInt(carbGrams) || 0) > 0 ? (parseInt(carbGrams) || 0) * 4 : null,
+          calories_fats: (parseInt(fatGrams) || 0) > 0 ? (parseInt(fatGrams) || 0) * 9 : null,
         }),
       });
       navigate('/progress');
@@ -230,17 +252,50 @@ export default function TodayPage() {
       </header>
 
       <div className="flex-1 p-4 space-y-6">
-        {/* Bodyweight */}
-        <section className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 flex items-center justify-between">
-          <label className="text-sm font-semibold text-zinc-800">Bodyweight (lb)</label>
-          <input
-            type="number"
-            step="0.1"
-            value={bodyweight}
-            onChange={(e) => setBodyweight(e.target.value)}
-            className="w-24 text-right font-mono text-lg bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all"
-            placeholder="0.0"
-          />
+        {/* Daily Biometrics */}
+        <section className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-zinc-800">Bodyweight (lb)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={bodyweight}
+              onChange={(e) => setBodyweight(e.target.value)}
+              className="w-24 text-right font-mono text-lg bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all"
+              placeholder="0.0"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-zinc-800">Waist (in)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={waistCircumference}
+              onChange={(e) => setWaistCircumference(e.target.value)}
+              className="w-24 text-right font-mono text-lg bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all"
+              placeholder="0.0"
+            />
+          </div>
+        </section>
+
+        {/* Nutrition */}
+        <section className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 space-y-3">
+          <h3 className="text-sm font-bold text-zinc-900">Calories by Macro Consumed</h3>
+          <p className="text-xs text-zinc-500">Enter grams; calories are stored automatically (4/4/9).</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <label className="text-[11px] text-zinc-500 font-semibold">Protein (g)</label>
+              <input type="number" value={proteinGrams} onChange={(e) => setProteinGrams(e.target.value)} className="w-full text-center font-mono bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-900" placeholder="0" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-zinc-500 font-semibold">Carbs (g)</label>
+              <input type="number" value={carbGrams} onChange={(e) => setCarbGrams(e.target.value)} className="w-full text-center font-mono bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-900" placeholder="0" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-zinc-500 font-semibold">Fat (g)</label>
+              <input type="number" value={fatGrams} onChange={(e) => setFatGrams(e.target.value)} className="w-full text-center font-mono bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-900" placeholder="0" />
+            </div>
+          </div>
         </section>
 
         {/* Program Block */}

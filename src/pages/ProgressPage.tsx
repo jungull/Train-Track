@@ -25,6 +25,10 @@ type SessionInfo = {
   id: number;
   date: string;
   bodyweight: number | null;
+  waist_circumference: number | null;
+  calories_protein: number | null;
+  calories_carbs: number | null;
+  calories_fats: number | null;
   notes: string | null;
 };
 
@@ -141,6 +145,32 @@ export default function ProgressPage() {
       .map(s => ({
         date: s.date.substring(5).replace('-', '/'),
         weight: s.bodyweight,
+        fullDate: s.date
+      }))
+      .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
+  }, [sessions]);
+
+
+  const waistTrendData = useMemo(() => {
+    return sessions
+      .filter(s => s.waist_circumference)
+      .map(s => ({
+        date: s.date.substring(5).replace('-', '/'),
+        waist: s.waist_circumference,
+        fullDate: s.date
+      }))
+      .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
+  }, [sessions]);
+
+  const macroTrendData = useMemo(() => {
+    return sessions
+      .filter(s => s.calories_protein || s.calories_carbs || s.calories_fats)
+      .map(s => ({
+        date: s.date.substring(5).replace('-', '/'),
+        protein: s.calories_protein || 0,
+        carbs: s.calories_carbs || 0,
+        fats: s.calories_fats || 0,
+        total: (s.calories_protein || 0) + (s.calories_carbs || 0) + (s.calories_fats || 0),
         fullDate: s.date
       }))
       .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
@@ -355,6 +385,45 @@ export default function ProgressPage() {
                       dot={{ r: 4, fill: '#18181b', strokeWidth: 2, stroke: '#fff' }}
                       activeDot={{ r: 6, fill: '#18181b', strokeWidth: 0 }}
                     />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Waist Trend */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 space-y-4">
+              <h2 className="font-bold text-zinc-900 flex items-center justify-between">
+                Waist Circumference
+                <span className="text-xs font-normal text-zinc-400">inches</span>
+              </h2>
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={waistTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} domain={['dataMin - 1', 'dataMax + 1']} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Line type="monotone" dataKey="waist" stroke="#0f766e" strokeWidth={2.5} dot={{ r: 4, fill: '#0f766e', strokeWidth: 2, stroke: '#fff' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Macro Calories */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 space-y-4">
+              <h2 className="font-bold text-zinc-900">Calories by Macro Consumed</h2>
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={macroTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a1a1aa' }} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="protein" stroke="#2563eb" strokeWidth={2} dot={false} name="Protein cals" />
+                    <Line type="monotone" dataKey="carbs" stroke="#f59e0b" strokeWidth={2} dot={false} name="Carb cals" />
+                    <Line type="monotone" dataKey="fats" stroke="#dc2626" strokeWidth={2} dot={false} name="Fat cals" />
+                    <Line type="monotone" dataKey="total" stroke="#18181b" strokeWidth={2.5} dot={{ r: 3, fill: '#18181b' }} name="Total cals" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

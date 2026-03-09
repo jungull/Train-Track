@@ -43,20 +43,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // POST /api/sessions → create/update session
         if (req.method === 'POST') {
-            const { date, weekday, bodyweight, notes, set_entries, run_entries, emom_entries } = req.body;
+            const { date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, set_entries, run_entries, emom_entries } = req.body;
 
             const { data: existing } = await supabase.from('sessions').select('id').eq('date', date).single();
             let sessionId: number;
 
             if (existing) {
                 sessionId = existing.id;
-                await supabase.from('sessions').update({ bodyweight, notes }).eq('id', sessionId);
+                await supabase.from('sessions').update({ bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes }).eq('id', sessionId);
                 await supabase.from('set_entries').delete().eq('session_id', sessionId);
                 await supabase.from('run_entries').delete().eq('session_id', sessionId);
                 await supabase.from('emom_entries').delete().eq('session_id', sessionId);
             } else {
                 const { data: newSession, error } = await supabase.from('sessions')
-                    .insert({ date, weekday, bodyweight, notes })
+                    .insert({ date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes })
                     .select('id').single();
                 if (error || !newSession) throw error || new Error('Insert failed');
                 sessionId = newSession.id;

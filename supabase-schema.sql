@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS sessions (
   date TEXT UNIQUE NOT NULL,
   weekday INTEGER,
   bodyweight REAL,
+  waist_circumference REAL,
+  calories_protein INTEGER,
+  calories_carbs INTEGER,
+  calories_fats INTEGER,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -110,3 +114,10 @@ CREATE INDEX IF NOT EXISTS idx_set_entries_session ON set_entries(session_id);
 CREATE INDEX IF NOT EXISTS idx_set_entries_exercise ON set_entries(exercise_name);
 CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date);
 CREATE INDEX IF NOT EXISTS idx_gtg_events_date ON gtg_events(date);
+
+
+-- Backfill-safe schema updates for existing deployments
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS waist_circumference REAL;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS calories_protein INTEGER;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS calories_carbs INTEGER;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS calories_fats INTEGER;
