@@ -18,6 +18,21 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE, weekday INTEGER, bodyweight REAL, notes TEXT, created_at TEXT
   );
+  CREATE TABLE IF NOT EXISTS nutrition_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE, weekday TEXT, protein_grams INTEGER, carbs_grams INTEGER, fat_grams INTEGER, created_at TEXT
+  );
+  INSERT OR IGNORE INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams, created_at) VALUES
+    ('2026-02-20', 'Friday', 107, 211, 130, datetime('now')),
+    ('2026-02-23', 'Monday', 88, 104, 41, datetime('now')),
+    ('2026-02-24', 'Tuesday', 88, 164, 24, datetime('now')),
+    ('2026-02-25', 'Wednesday', 185, 202, 79, datetime('now')),
+    ('2026-02-26', 'Thursday', 200, 230, 92, datetime('now')),
+    ('2026-02-27', 'Friday', 133, 262, 60, datetime('now')),
+    ('2026-03-02', 'Monday', 177, 227, 118, datetime('now')),
+    ('2026-03-03', 'Tuesday', 120, 247, 73, datetime('now')),
+    ('2026-03-04', 'Wednesday', 176, 114, 76, datetime('now')),
+    ('2026-03-05', 'Thursday', 226, 348, 127, datetime('now')),
+    ('2026-03-09', 'Monday', 112, 97, 38, datetime('now'));
   CREATE TABLE IF NOT EXISTS set_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER, block_title TEXT, exercise_name TEXT,
     set_index INTEGER, weight REAL, reps INTEGER, rpe REAL, notes TEXT,
