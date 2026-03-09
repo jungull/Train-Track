@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (err: any) {
         res.status(500).json({
             error: err.message || err,
-            diagnostic: 'Standardized try/catch in settings.ts'
+            diagnostic: 'Standardized inlined settings.ts'
         });
     }
 }

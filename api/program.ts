@@ -1,26 +1,45 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabase } from './_lib/supabase';
+
+let _client: any = null;
+
+async function getSupabase() {
+    if (!_client) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const url = process.env.SUPABASE_URL!;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        _client = createClient(url, key);
+    }
+    return _client;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const supabase = await getSupabase();
-    // GET /api/program → list all days
-    if (req.method === 'GET') {
-        const { data, error } = await supabase.from('program_days').select('*').order('weekday', { ascending: true });
-        if (error) return res.status(500).json({ error: error.message });
-        return res.json(data);
-    }
+    try {
+        const supabase = await getSupabase();
 
-    // PUT /api/program?weekday=2 → update one day
-    if (req.method === 'PUT') {
-        const weekday = req.query.weekday;
-        const { title, exercises } = req.body;
-        const { error } = await supabase.from('program_days').update({
-            title,
-            exercises: JSON.stringify(exercises),
-        }).eq('weekday', Number(weekday));
-        if (error) return res.status(500).json({ error: error.message });
-        return res.json({ success: true });
-    }
+        // GET /api/program → list all days
+        if (req.method === 'GET') {
+            const { data, error } = await supabase.from('program_days').select('*').order('weekday', { ascending: true });
+            if (error) throw error;
+            return res.json(data);
+        }
 
-    res.status(405).json({ error: 'Method not allowed' });
+        // PUT /api/program?weekday=2 → update one day
+        if (req.method === 'PUT') {
+            const weekday = req.query.weekday;
+            const { title, exercises } = req.body;
+            const { error } = await supabase.from('program_days').update({
+                title,
+                exercises: JSON.stringify(exercises),
+            }).eq('weekday', Number(weekday));
+            if (error) throw error;
+            return res.json({ success: true });
+        }
+
+        res.status(405).json({ error: 'Method not allowed' });
+    } catch (err: any) {
+        res.status(500).json({
+            error: err.message || err,
+            diagnostic: 'Standardized inlined program.ts'
+        });
+    }
 }
