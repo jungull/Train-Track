@@ -36,6 +36,32 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Nutrition history
+CREATE TABLE IF NOT EXISTS nutrition_history (
+  id SERIAL PRIMARY KEY,
+  date TEXT UNIQUE NOT NULL,
+  weekday TEXT,
+  protein_g INTEGER,
+  carbs_g INTEGER,
+  fat_g INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed nutrition history entries
+INSERT INTO nutrition_history (date, weekday, protein_g, carbs_g, fat_g) VALUES
+  ('2026-02-20', 'Friday', 107, 211, 130),
+  ('2026-02-23', 'Monday', 88, 104, 41),
+  ('2026-02-24', 'Tuesday', 88, 164, 24),
+  ('2026-02-25', 'Wednesday', 185, 202, 79),
+  ('2026-02-26', 'Thursday', 200, 230, 92),
+  ('2026-02-27', 'Friday', 133, 262, 60),
+  ('2026-03-02', 'Monday', 177, 227, 118),
+  ('2026-03-03', 'Tuesday', 120, 247, 73),
+  ('2026-03-04', 'Wednesday', 176, 114, 76),
+  ('2026-03-05', 'Thursday', 226, 348, 127),
+  ('2026-03-09', 'Monday', 112, 97, 38)
+ON CONFLICT (date) DO NOTHING;
+
 -- Set entries (strength, bodyweight, sprint, interval, timed)
 CREATE TABLE IF NOT EXISTS set_entries (
   id SERIAL PRIMARY KEY,
