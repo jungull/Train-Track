@@ -39,13 +39,13 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT UNIQUE,
     weekday TEXT,
-    protein_g INTEGER,
-    carbs_g INTEGER,
-    fat_g INTEGER,
+    protein_grams INTEGER,
+    carbs_grams INTEGER,
+    fat_grams INTEGER,
     created_at TEXT
   );
 
-  INSERT OR IGNORE INTO nutrition_history (date, weekday, protein_g, carbs_g, fat_g, created_at) VALUES
+  INSERT OR IGNORE INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams, created_at) VALUES
     ('2026-02-20', 'Friday', 107, 211, 130, datetime('now')),
     ('2026-02-23', 'Monday', 88, 104, 41, datetime('now')),
     ('2026-02-24', 'Tuesday', 88, 164, 24, datetime('now')),

@@ -41,14 +41,14 @@ CREATE TABLE IF NOT EXISTS nutrition_history (
   id SERIAL PRIMARY KEY,
   date TEXT UNIQUE NOT NULL,
   weekday TEXT,
-  protein_g INTEGER,
-  carbs_g INTEGER,
-  fat_g INTEGER,
+  protein_grams INTEGER,
+  carbs_grams INTEGER,
+  fat_grams INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Seed nutrition history entries
-INSERT INTO nutrition_history (date, weekday, protein_g, carbs_g, fat_g) VALUES
+INSERT INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams) VALUES
   ('2026-02-20', 'Friday', 107, 211, 130),
   ('2026-02-23', 'Monday', 88, 104, 41),
   ('2026-02-24', 'Tuesday', 88, 164, 24),
