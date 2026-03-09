@@ -1,32 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-let _client: any = null;
-
-async function getSupabase() {
-    if (!_client) {
-        const { createClient } = await import('@supabase/supabase-js');
-        const url = process.env.SUPABASE_URL!;
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-        _client = createClient(url, key);
-    }
-    return _client;
-}
+import { getSupabase } from './_lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         const supabase = await getSupabase();
 
-        const [sessionsRes, setRes, runRes, gtgRes] = await Promise.all([
-            supabase.from('sessions').select('*').order('date', { ascending: true }),
-            supabase.from('set_entries').select('*'),
-            supabase.from('run_entries').select('*'),
-            supabase.from('gtg_events').select('*'),
-        ]);
-
+        // Sequential queries to avoid potential concurrency/timeout issues in Lambda
+        const sessionsRes = await supabase.from('sessions').select('*').order('date', { ascending: true });
         if (sessionsRes.error) throw sessionsRes.error;
+
+        const setRes = await supabase.from('set_entries').select('*');
         if (setRes.error) throw setRes.error;
+
+        const runRes = await supabase.from('run_entries').select('*');
         if (runRes.error) throw runRes.error;
+
+        const gtgRes = await supabase.from('gtg_events').select('*');
         if (gtgRes.error) throw gtgRes.error;
 
         res.json({
@@ -39,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(500).json({
             error: err.message || err,
             details: err,
-            diagnostic: "Inlined getSupabase used"
+            diagnostic: "Inlined sequential getSupabase used"
         });
     }
 }
