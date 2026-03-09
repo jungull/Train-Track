@@ -1,5 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabase } from './_lib/supabase';
+
+let _client: any = null;
+
+async function getSupabase() {
+    if (!_client) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const url = process.env.SUPABASE_URL!;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        _client = createClient(url, key);
+    }
+    return _client;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
@@ -29,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(500).json({
             error: err.message || err,
             details: err,
-            diagnostic: "Inlined sequential getSupabase used"
+            diagnostic: "Inlined sequential getSupabase used - version 3"
         });
     }
 }
