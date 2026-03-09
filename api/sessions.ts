@@ -1,14 +1,19 @@
+```typescript
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabase } from './_lib/supabase';
+
+let _client: any = null;
+
+async function getSupabase() {
+    if (!_client) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const url = process.env.SUPABASE_URL!;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        _client = createClient(url, key);
+    }
+    return _client;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const supabase = await getSupabase();
-    // GET /api/sessions?date=2024-01-15 → fetch one session
-    if (req.method === 'GET') {
-        const date = req.query.date as string;
-        if (!date) return res.status(400).json({ error: 'date query param required' });
-
-        const { data: session } = await supabase.from('sessions').select('*').eq('date', date).single();
         if (!session) return res.json(null);
 
         const [setRes, runRes, emomRes] = await Promise.all([
