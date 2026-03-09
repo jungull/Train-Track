@@ -30,11 +30,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const gtgRes = await supabase.from('gtg_events').select('*');
         if (gtgRes.error) throw gtgRes.error;
 
+        const emomRes = await supabase.from('emom_entries').select('*');
+        if (emomRes.error) throw emomRes.error;
+
         res.json({
             sessions: sessionsRes.data || [],
             set_entries: setRes.data || [],
             run_entries: runRes.data || [],
             gtg_events: gtgRes.data || [],
+            emom_entries: emomRes.data || [],
         });
     } catch (err: any) {
         res.status(500).json({

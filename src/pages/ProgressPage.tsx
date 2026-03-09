@@ -17,6 +17,7 @@ type ExerciseLogEntry = {
   category: string;
   distance: number | null;
   duration_seconds: number | null;
+  minutes: number | null;
   date: string;
 };
 
@@ -200,7 +201,7 @@ export default function ProgressPage() {
     }
 
     if (category === 'emom') {
-      const minutes = cellEntries[0].duration_seconds ? Math.round(cellEntries[0].duration_seconds / 60) : 0;
+      const minutes = cellEntries[0].minutes || 0;
       return <span className="text-zinc-700">{minutes}m EMOM</span>;
     }
 
