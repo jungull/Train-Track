@@ -182,17 +182,43 @@ export default function TodayPage() {
 
   const handleSave = async () => {
     try {
-      await fetch('/api/sessions', {
+      const sanitizeNumber = (value: unknown) => {
+        if (value === '' || value === null || value === undefined) return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+      };
+
+      const payload = {
+        ...session,
+        bodyweight: sanitizeNumber(bodyweight),
+        set_entries: (session?.set_entries || []).map((entry: any) => ({
+          ...entry,
+          set_index: sanitizeNumber(entry.set_index),
+          weight: sanitizeNumber(entry.weight),
+          reps: sanitizeNumber(entry.reps),
+          rpe: sanitizeNumber(entry.rpe),
+          distance: sanitizeNumber(entry.distance),
+          duration_seconds: sanitizeNumber(entry.duration_seconds),
+        })),
+      };
+
+      const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...session,
-          bodyweight: parseFloat(bodyweight) || null,
-        }),
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        const errorPayload = await res.json().catch(() => ({}));
+        console.error('Failed to save session', errorPayload);
+        window.alert('Could not save workout. Please try again.');
+        return;
+      }
+
       navigate('/progress');
     } catch (err) {
       console.error(err);
+      window.alert('Could not save workout. Please try again.');
     }
   };
 
