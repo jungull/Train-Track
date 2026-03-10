@@ -62,6 +62,7 @@ export default function TodayPage() {
   const [loading, setLoading] = useState(true);
   const sessionRef = useRef<any>(null);
   const inFlightSaveRef = useRef<Promise<void> | null>(null);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const dateStr = format(date, 'yyyy-MM-dd');
   const weekday = getDay(date);
@@ -235,7 +236,12 @@ export default function TodayPage() {
     setSession(nextSession);
     sessionRef.current = nextSession;
     setSavingInline(true);
-    const savePromise = saveSessionToApi(nextSession);
+
+    const savePromise = saveQueueRef.current
+      .catch(() => undefined)
+      .then(() => saveSessionToApi(nextSession));
+
+    saveQueueRef.current = savePromise;
     inFlightSaveRef.current = savePromise;
 
     try {
@@ -246,19 +252,9 @@ export default function TodayPage() {
       if (inFlightSaveRef.current === savePromise) {
         inFlightSaveRef.current = null;
       }
-      setSavingInline(false);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      if (inFlightSaveRef.current) {
-        await inFlightSaveRef.current;
+      if (saveQueueRef.current === savePromise) {
+        setSavingInline(false);
       }
-      await saveSessionToApi(sessionRef.current ?? session);
-      navigate('/progress');
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -544,7 +540,12 @@ export default function TodayPage() {
                             <button
                               onClick={async () => {
                                 const nextEntries = [...session.set_entries];
-                                nextEntries[globalIdx] = { ...nextEntries[globalIdx], logged: !nextEntries[globalIdx]?.logged };
+                                const currentlyLogged = Boolean(nextEntries[globalIdx]?.logged);
+                                nextEntries[globalIdx] = {
+                                  ...nextEntries[globalIdx],
+                                  logged: !currentlyLogged,
+                                  logged_at: !currentlyLogged ? new Date().toISOString() : null,
+                                };
                                 await persistSession({ ...session, set_entries: nextEntries });
                               }}
                               className={`text-[10px] px-2 py-1 rounded-md border ${set.logged ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-zinc-500 border-zinc-200'}`}
@@ -555,13 +556,13 @@ export default function TodayPage() {
                         );
                       })}
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const lastSet = sets[sets.length - 1];
                           const next = {
                             ...session,
                             set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: ex, set_index: sets.length + 1, weight: lastSet?.weight || null, reps: lastSet?.reps || null, rpe: null, category: lastSet?.category || 'strength', distance: lastSet?.distance || null, duration_seconds: lastSet?.duration_seconds || null }]
                           };
-                          setSession(next);
+                          await persistSession(next);
                         }}
                         className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors py-1"
                       >
@@ -580,14 +581,14 @@ export default function TodayPage() {
 
             <div className="pt-4 border-t border-zinc-100">
               <button
-                onClick={() => {
+                onClick={async () => {
                   const name = window.prompt('Exercise name:');
                   if (name) {
                     const next = {
                       ...session,
-                      set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: name, set_index: 1, weight: null, reps: null, rpe: null }]
+                      set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: name, set_index: 1, weight: null, reps: null, rpe: null, category: 'strength', logged: 0, logged_at: null }]
                     };
-                    setSession(next);
+                    await persistSession(next);
                     setExpandedExercises(prev => ({ ...prev, [name]: true }));
                   }
                 }}
@@ -599,12 +600,7 @@ export default function TodayPage() {
           </div>
         </section>
 
-        <button
-          onClick={handleSave}
-          className="w-full bg-zinc-950 text-white font-semibold rounded-xl py-4 mt-8 shadow-lg shadow-zinc-900/20 active:scale-[0.98] transition-all"
-        >
-          {savingInline ? 'Saving...' : 'Complete Workout'}
-        </button>
+        <p className="text-xs text-center text-zinc-500">{savingInline ? 'Saving changes…' : 'Sets save when you tap Log.'}</p>
       </div>
     </div>
   );
