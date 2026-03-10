@@ -38,10 +38,27 @@ export default function HomePage() {
           fetch('/api/progress'),
           fetch(`/api/sessions?date=${todayStr}`),
         ]);
-        const progressData = await progressRes.json();
-        const sessionData = await sessionRes.json();
 
-        setProgress(progressData || { sessions: [], set_entries: [], run_entries: [], gtg_events: [] });
+        const progressData = progressRes.ok ? await progressRes.json() : null;
+        const sessionData = sessionRes.ok ? await sessionRes.json() : null;
+
+        const needsNutritionFallback = !Array.isArray(progressData?.nutrition_history);
+        let nutritionFallback: any[] = [];
+        if (needsNutritionFallback) {
+          const nutritionRes = await fetch('/api/nutrition-history');
+          nutritionFallback = nutritionRes.ok ? await nutritionRes.json() : [];
+        }
+
+        const normalizedProgress = {
+          sessions: progressData?.sessions || [],
+          set_entries: progressData?.set_entries || [],
+          run_entries: progressData?.run_entries || [],
+          gtg_events: progressData?.gtg_events || [],
+          emom_entries: progressData?.emom_entries || [],
+          nutrition_history: Array.isArray(progressData?.nutrition_history) ? progressData.nutrition_history : (nutritionFallback || []),
+        };
+
+        setProgress(normalizedProgress);
         setTodaySession(sessionData);
         setBodyweight(sessionData?.bodyweight ? String(sessionData.bodyweight) : '');
         setWaist(sessionData?.waist_circumference ? String(sessionData.waist_circumference) : '');
