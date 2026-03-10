@@ -1,10 +1,11 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Dumbbell, Zap, ListTodo, Timer, LineChart, Settings } from 'lucide-react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { House, Dumbbell, Zap, ListTodo, Timer, LineChart, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import HomePage from './pages/HomePage';
 import TodayPage from './pages/TodayPage';
 import GTGPage from './pages/GTGPage';
 import ProgramPage from './pages/ProgramPage';
@@ -41,6 +42,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 w-full bg-white border-t border-zinc-200 pb-safe">
         <div className="max-w-md mx-auto flex justify-around items-center h-16 px-2">
+          <NavItem to="/" icon={<House />} label="Home" />
           <NavItem to="/today" icon={<Dumbbell />} label="Today" />
           <NavItem to="/gtg" icon={<Zap />} label="GTG" />
           <NavItem to="/program" icon={<ListTodo />} label="Program" />
@@ -76,7 +78,7 @@ export default function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Navigate to="/today" replace />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/today" element={<TodayPage />} />
           <Route path="/gtg" element={<GTGPage />} />
           <Route path="/program" element={<ProgramPage />} />
