@@ -98,11 +98,24 @@ export default function ProgressPage() {
     fetchLog();
 
     // Catch late-arriving writes from Today inline saves when users navigate quickly.
-    const retry = window.setTimeout(() => {
+    const retryFast = window.setTimeout(() => {
       fetchLog();
     }, 1200);
 
-    return () => window.clearTimeout(retry);
+    const retrySlow = window.setTimeout(() => {
+      fetchLog();
+    }, 3200);
+
+    const onFocus = () => {
+      fetchLog();
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.clearTimeout(retryFast);
+      window.clearTimeout(retrySlow);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const handleRename = async (oldName: string) => {

@@ -69,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             if (set_entries?.length > 0) {
-                const rows = set_entries.map((e: any) => ({
+                const baseRows = set_entries.map((e: any) => ({
                     session_id: sessionId,
                     block_title: e.block_title, exercise_name: e.exercise_name,
                     set_index: toNullableNumber(e.set_index),
@@ -81,8 +81,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     distance: toNullableNumber(e.distance),
                     duration_seconds: toNullableNumber(e.duration_seconds),
                 }));
-                const { error } = await supabase.from('set_entries').insert(rows);
-                if (error) throw error;
+
+                const withLogRows = set_entries.map((e: any, i: number) => ({
+                    ...baseRows[i],
+                    logged: e.logged ? 1 : 0,
+                    logged_at: e.logged_at || null,
+                }));
+
+                const withLogResult = await supabase.from('set_entries').insert(withLogRows);
+                if (withLogResult.error) {
+                    const missingLogColumns = /logged(_at)?/.test(String(withLogResult.error.message || ''));
+                    if (!missingLogColumns) throw withLogResult.error;
+
+                    const fallbackResult = await supabase.from('set_entries').insert(baseRows);
+                    if (fallbackResult.error) throw fallbackResult.error;
+                }
             }
 
             if (run_entries?.length > 0) {
