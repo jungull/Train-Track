@@ -18,8 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const supabase = await getSupabase();
 
         const nutritionRes = await supabase.from('nutrition_history').select('*').order('date', { ascending: true });
-        if (nutritionRes.error) throw nutritionRes.error;
 
+        if (nutritionRes.error) return res.json([]);
         res.json(nutritionRes.data || []);
     } catch (err: any) {
         res.status(500).json({

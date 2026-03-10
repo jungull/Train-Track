@@ -34,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (emomRes.error) throw emomRes.error;
 
         const nutritionRes = await supabase.from('nutrition_history').select('*').order('date', { ascending: true });
-        if (nutritionRes.error) throw nutritionRes.error;
+        const nutrition_history = nutritionRes.error ? [] : (nutritionRes.data || []);
 
         res.json({
             sessions: sessionsRes.data || [],
@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             run_entries: runRes.data || [],
             gtg_events: gtgRes.data || [],
             emom_entries: emomRes.data || [],
-            nutrition_history: nutritionRes.data || [],
+            nutrition_history,
         });
     } catch (err: any) {
         res.status(500).json({

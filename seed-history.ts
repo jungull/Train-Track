@@ -18,27 +18,6 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE, weekday INTEGER, bodyweight REAL, notes TEXT, created_at TEXT
   );
-  CREATE TABLE IF NOT EXISTS nutrition_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE, weekday TEXT, protein_grams INTEGER, carbs_grams INTEGER, fat_grams INTEGER, calories INTEGER, created_at TEXT
-  );
-  INSERT INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams, calories, created_at) VALUES
-    ('2026-02-20', 'Friday', 107, 211, 130, 2454, datetime('now')),
-    ('2026-02-23', 'Monday', 88, 104, 41, 1137, datetime('now')),
-    ('2026-02-24', 'Tuesday', 88, 164, 24, 1192, datetime('now')),
-    ('2026-02-25', 'Wednesday', 185, 202, 79, 2267, datetime('now')),
-    ('2026-02-26', 'Thursday', 200, 230, 92, 2468, datetime('now')),
-    ('2026-02-27', 'Friday', 133, 262, 60, 2096, datetime('now')),
-    ('2026-03-02', 'Monday', 177, 227, 118, 2702, datetime('now')),
-    ('2026-03-03', 'Tuesday', 120, 247, 73, 2117, datetime('now')),
-    ('2026-03-04', 'Wednesday', 176, 114, 76, 1844, datetime('now')),
-    ('2026-03-05', 'Thursday', 226, 348, 127, 3475, datetime('now')),
-    ('2026-03-09', 'Monday', 168, 148, 75, 1947, datetime('now'))
-  ON CONFLICT(date) DO UPDATE SET
-    weekday = excluded.weekday,
-    protein_grams = excluded.protein_grams,
-    carbs_grams = excluded.carbs_grams,
-    fat_grams = excluded.fat_grams,
-    calories = excluded.calories;
   CREATE TABLE IF NOT EXISTS set_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER, block_title TEXT, exercise_name TEXT,
     set_index INTEGER, weight REAL, reps INTEGER, rpe REAL, notes TEXT,
