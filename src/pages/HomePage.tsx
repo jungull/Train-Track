@@ -20,6 +20,15 @@ const DEFAULT_NUTRITION_HISTORY = [
   { date: '2026-03-09', weekday: 'Monday', protein_grams: 168, carbs_grams: 148, fat_grams: 75 },
 ];
 
+
+
+function resolveNutritionHistory(progressData: any, nutritionFallback: any[]) {
+  const progressNutrition = Array.isArray(progressData?.nutrition_history) ? progressData.nutrition_history : [];
+  if (progressNutrition.length > 0) return progressNutrition;
+  if (Array.isArray(nutritionFallback) && nutritionFallback.length > 0) return nutritionFallback;
+  return DEFAULT_NUTRITION_HISTORY;
+}
+
 const METRICS: { key: MetricKey; label: string; accent: string }[] = [
   { key: 'bodyweight', label: 'Bodyweight over time', accent: '#18181b' },
   { key: 'calories', label: 'Calories per day', accent: '#0ea5e9' },
@@ -57,16 +66,13 @@ export default function HomePage() {
         const progressData = progressRes.ok ? await progressRes.json() : null;
         const sessionData = sessionRes.ok ? await sessionRes.json() : null;
 
-        const progressNutrition = Array.isArray(progressData?.nutrition_history) ? progressData.nutrition_history : [];
-        const needsNutritionFallback = progressNutrition.length === 0;
+        const needsNutritionFallback = !Array.isArray(progressData?.nutrition_history) || progressData.nutrition_history.length === 0;
         let nutritionFallback: any[] = [];
         if (needsNutritionFallback) {
           const nutritionRes = await fetch('/api/nutrition-history');
           nutritionFallback = nutritionRes.ok ? await nutritionRes.json() : [];
         }
-        const finalNutrition = progressNutrition.length > 0
-          ? progressNutrition
-          : ((nutritionFallback && nutritionFallback.length > 0) ? nutritionFallback : DEFAULT_NUTRITION_HISTORY);
+        const finalNutrition = resolveNutritionHistory(progressData, nutritionFallback);
 
         const normalizedProgress = {
           sessions: progressData?.sessions || [],
