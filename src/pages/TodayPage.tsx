@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { format, subDays, getDay, parseISO } from 'date-fns';
 import { ChevronLeft, ListTodo, Plus, Check, Info, ChevronDown, ChevronUp, Trash2, GripVertical } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -60,6 +60,8 @@ export default function TodayPage() {
   const [draggedExercise, setDraggedExercise] = useState<string | null>(null);
   const [savingInline, setSavingInline] = useState(false);
   const [loading, setLoading] = useState(true);
+  const sessionRef = useRef<any>(null);
+  const inFlightSaveRef = useRef<Promise<void> | null>(null);
 
   const dateStr = format(date, 'yyyy-MM-dd');
   const weekday = getDay(date);
@@ -188,6 +190,24 @@ export default function TodayPage() {
     fetchData();
   }, [dateStr, weekday]);
 
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  const saveSessionToApi = async (nextSession: any) => {
+    const response = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nextSession),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Session save failed (${response.status}): ${errorText}`);
+    }
+  };
+
   useEffect(() => {
     const names: string[] = Array.from(new Set((session?.set_entries || []).map((e: any) => String(e.exercise_name))));
     setExerciseOrder(prev => {
@@ -213,27 +233,29 @@ export default function TodayPage() {
 
   const persistSession = async (nextSession: any) => {
     setSession(nextSession);
+    sessionRef.current = nextSession;
     setSavingInline(true);
+    const savePromise = saveSessionToApi(nextSession);
+    inFlightSaveRef.current = savePromise;
+
     try {
-      await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nextSession),
-      });
+      await savePromise;
     } catch (err) {
       console.error(err);
     } finally {
+      if (inFlightSaveRef.current === savePromise) {
+        inFlightSaveRef.current = null;
+      }
       setSavingInline(false);
     }
   };
 
   const handleSave = async () => {
     try {
-      await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(session),
-      });
+      if (inFlightSaveRef.current) {
+        await inFlightSaveRef.current;
+      }
+      await saveSessionToApi(sessionRef.current ?? session);
       navigate('/progress');
     } catch (err) {
       console.error(err);
