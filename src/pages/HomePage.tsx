@@ -71,6 +71,23 @@ export default function HomePage() {
     }
 
     if (selectedMetric === 'calories') {
+      const nutritionRows = [...(progress.nutrition_history || [])]
+        .map((row: any) => {
+          const macroCalories = ((Number(row.protein_grams) || 0) * 4) + ((Number(row.carbs_grams) || 0) * 4) + ((Number(row.fat_grams) || 0) * 9);
+          const directCalories = Number(row.calories) || 0;
+          const totalCalories = directCalories > 0 ? directCalories : macroCalories;
+          return {
+            date: row.date,
+            value: Math.round(totalCalories * 10) / 10,
+          };
+        })
+        .filter((r: any) => r.date && r.value > 0)
+        .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+      if (nutritionRows.length > 0) {
+        return nutritionRows.map((r: any) => ({ date: r.date.slice(5), value: r.value }));
+      }
+
       return sessions
         .map((s: any) => ({
           date: s.date.slice(5),
