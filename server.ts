@@ -73,6 +73,7 @@ db.exec(`
     reps INTEGER,
     rpe REAL,
     logged INTEGER DEFAULT 0,
+    logged_at TEXT,
     notes TEXT,
     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
   );
@@ -138,6 +139,7 @@ try { db.exec(`ALTER TABLE set_entries ADD COLUMN category TEXT DEFAULT 'strengt
 try { db.exec(`ALTER TABLE set_entries ADD COLUMN distance REAL`); } catch { }
 try { db.exec(`ALTER TABLE set_entries ADD COLUMN duration_seconds INTEGER`); } catch { }
 try { db.exec(`ALTER TABLE set_entries ADD COLUMN logged INTEGER DEFAULT 0`); } catch { }
+try { db.exec(`ALTER TABLE set_entries ADD COLUMN logged_at TEXT`); } catch { }
 
 // Migrations: add nutrition and check-in fields to sessions
 try { db.exec(`ALTER TABLE sessions ADD COLUMN waist_circumference REAL`); } catch { }
@@ -259,9 +261,9 @@ app.post('/api/sessions', (req, res) => {
     }
 
     if (set_entries && set_entries.length > 0) {
-      const insertSet = db.prepare('INSERT INTO set_entries (session_id, block_title, exercise_name, set_index, weight, reps, rpe, logged, notes, category, distance, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const insertSet = db.prepare('INSERT INTO set_entries (session_id, block_title, exercise_name, set_index, weight, reps, rpe, logged, logged_at, notes, category, distance, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const entry of set_entries) {
-        insertSet.run(sessionId, entry.block_title, entry.exercise_name, entry.set_index, entry.weight, entry.reps, entry.rpe, entry.logged ? 1 : 0, entry.notes, entry.category || 'strength', entry.distance || null, entry.duration_seconds || null);
+        insertSet.run(sessionId, entry.block_title, entry.exercise_name, entry.set_index, entry.weight, entry.reps, entry.rpe, entry.logged ? 1 : 0, entry.logged_at || null, entry.notes, entry.category || 'strength', entry.distance || null, entry.duration_seconds || null);
       }
     }
 
