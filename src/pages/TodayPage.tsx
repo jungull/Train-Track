@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, subDays, getDay, parseISO } from 'date-fns';
-import { ChevronLeft, ListTodo, Plus, Check, Info } from 'lucide-react';
+import { ChevronLeft, ListTodo, Plus, Check, Info, ChevronDown, ChevronUp, Trash2, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 const DAY_TEMPLATES: Record<number, any> = {
@@ -60,6 +60,10 @@ export default function TodayPage() {
   const [proteinGrams, setProteinGrams] = useState('');
   const [carbGrams, setCarbGrams] = useState('');
   const [fatGrams, setFatGrams] = useState('');
+  const [expandedExercises, setExpandedExercises] = useState<Record<string, boolean>>({});
+  const [exerciseOrder, setExerciseOrder] = useState<string[]>([]);
+  const [completedExercises, setCompletedExercises] = useState<string[]>([]);
+  const [savingInline, setSavingInline] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -198,6 +202,52 @@ export default function TodayPage() {
     fetchData();
   }, [dateStr, weekday]);
 
+  useEffect(() => {
+    const names = Array.from(new Set((session?.set_entries || []).map((e: any) => e.exercise_name)));
+    setExerciseOrder(prev => {
+      const kept = prev.filter(name => names.includes(name));
+      const added = names.filter(name => !kept.includes(name));
+      return [...kept, ...added];
+    });
+    setExpandedExercises(prev => {
+      const next: Record<string, boolean> = {};
+      for (const name of names) next[name] = prev[name] ?? false;
+      return next;
+    });
+    setCompletedExercises(prev => prev.filter(name => names.includes(name)));
+  }, [session?.set_entries]);
+
+  const normalizeSetIndices = (entries: any[]) => {
+    const counts: Record<string, number> = {};
+    return entries.map((entry) => {
+      counts[entry.exercise_name] = (counts[entry.exercise_name] || 0) + 1;
+      return { ...entry, set_index: counts[entry.exercise_name] };
+    });
+  };
+
+  const persistSession = async (nextSession: any) => {
+    setSession(nextSession);
+    setSavingInline(true);
+    try {
+      await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...nextSession,
+          bodyweight: parseFloat(bodyweight) || null,
+          waist_circumference: parseFloat(waistCircumference) || null,
+          calories_protein: (parseInt(proteinGrams) || 0) > 0 ? (parseInt(proteinGrams) || 0) * 4 : null,
+          calories_carbs: (parseInt(carbGrams) || 0) > 0 ? (parseInt(carbGrams) || 0) * 4 : null,
+          calories_fats: (parseInt(fatGrams) || 0) > 0 ? (parseInt(fatGrams) || 0) * 9 : null,
+        }),
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingInline(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       await fetch('/api/sessions', {
@@ -307,16 +357,86 @@ export default function TodayPage() {
             </span>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-4">
             {/* Group existing sets by exercise name to render them together */}
-            {Array.from(new Set(session?.set_entries?.map((e: any) => e.exercise_name))).map((ex: any) => {
+            {[...exerciseOrder]
+              .sort((a, b) => {
+                const aDone = completedExercises.includes(a);
+                const bDone = completedExercises.includes(b);
+                return aDone === bDone ? 0 : aDone ? 1 : -1;
+              })
+              .map((ex: any, exerciseIndex: number) => {
               const rec = getRecommendation(ex);
               const sets = session.set_entries.filter((e: any) => e.exercise_name === ex);
+              const isDone = completedExercises.includes(ex);
+              const isExpanded = expandedExercises[ex] || false;
 
               return (
-                <div key={ex} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-zinc-800 uppercase tracking-wider">{ex}</h4>
+                <div key={ex} className={`space-y-3 rounded-xl border p-3 ${isDone ? 'bg-emerald-50/70 border-emerald-200' : 'bg-zinc-50 border-zinc-200'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <button onClick={() => setExpandedExercises(prev => ({ ...prev, [ex]: !isExpanded }))} className="flex items-center gap-2 min-w-0 text-left">
+                      <h4 className="text-xs font-semibold text-zinc-800 uppercase tracking-wider truncate">{ex}</h4>
+                      {isExpanded ? <ChevronUp className="w-3 h-3 text-zinc-500" /> : <ChevronDown className="w-3 h-3 text-zinc-500" />}
+                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => {
+                          if (exerciseIndex > 0) {
+                            setExerciseOrder(prev => {
+                              const next = [...prev];
+                              const currentIndex = next.indexOf(ex);
+                              [next[currentIndex - 1], next[currentIndex]] = [next[currentIndex], next[currentIndex - 1]];
+                              return next;
+                            });
+                          }
+                        }}
+                        className="p-1 text-zinc-500 hover:text-zinc-900"
+                        title="Move up"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (exerciseIndex < exerciseOrder.length - 1) {
+                            setExerciseOrder(prev => {
+                              const next = [...prev];
+                              const currentIndex = next.indexOf(ex);
+                              [next[currentIndex + 1], next[currentIndex]] = [next[currentIndex], next[currentIndex + 1]];
+                              return next;
+                            });
+                          }
+                        }}
+                        className="p-1 text-zinc-500 hover:text-zinc-900"
+                        title="Move down"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const nextName = window.prompt('Rename exercise:', ex);
+                          if (!nextName || nextName === ex) return;
+                          const nextEntries = (session.set_entries || []).map((entry: any) => entry.exercise_name === ex ? { ...entry, exercise_name: nextName } : entry);
+                          setSession({ ...session, set_entries: normalizeSetIndices(nextEntries) });
+                          setExerciseOrder(prev => prev.map(name => name === ex ? nextName : name));
+                        }}
+                        className="p-1 text-zinc-500 hover:text-zinc-900"
+                        title="Rename"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const nextEntries = (session.set_entries || []).filter((entry: any) => entry.exercise_name !== ex);
+                          setSession({ ...session, set_entries: normalizeSetIndices(nextEntries) });
+                          setExerciseOrder(prev => prev.filter(name => name !== ex));
+                          setCompletedExercises(prev => prev.filter(name => name !== ex));
+                        }}
+                        className="p-1 text-rose-500 hover:text-rose-700"
+                        title="Remove exercise"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {rec && (
@@ -329,7 +449,23 @@ export default function TodayPage() {
                     </div>
                   )}
 
-                  <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-zinc-500">{sets.length} set{sets.length === 1 ? '' : 's'}</p>
+                    <button
+                      onClick={async () => {
+                        const isMarkingDone = !isDone;
+                        setCompletedExercises(prev => isMarkingDone ? [...prev, ex] : prev.filter(name => name !== ex));
+                        if (isMarkingDone) {
+                          await persistSession({ ...session });
+                        }
+                      }}
+                      className={`text-[11px] px-2 py-1 rounded-md border ${isDone ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-zinc-600 border-zinc-200'}`}
+                    >
+                      {isDone ? 'Done' : 'Mark done'}
+                    </button>
+                  </div>
+
+                  {isExpanded && <div className="space-y-2">
                     {sets.map((set: any, idx: number) => {
                       // Find the actual index in the full array to update correctly
                       const globalIdx = session.set_entries.findIndex((s: any) => s === set);
@@ -409,22 +545,44 @@ export default function TodayPage() {
                             newSets[globalIdx].rpe = parseFloat(e.target.value);
                             setSession({ ...session, set_entries: newSets });
                           }} className="w-12 bg-zinc-50 border border-zinc-200 rounded-md px-1 py-1.5 text-sm font-mono focus:ring-1 focus:ring-zinc-900" />
+                          <button
+                            onClick={async () => {
+                              const nextEntries = session.set_entries.filter((_: any, entryIndex: number) => entryIndex !== globalIdx);
+                              const next = { ...session, set_entries: normalizeSetIndices(nextEntries) };
+                              await persistSession(next);
+                            }}
+                            className="p-1 text-rose-500 hover:text-rose-700"
+                            title="Remove set"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const nextEntries = [...session.set_entries];
+                              nextEntries[globalIdx] = { ...nextEntries[globalIdx], logged: !nextEntries[globalIdx]?.logged };
+                              await persistSession({ ...session, set_entries: nextEntries });
+                            }}
+                            className={`text-[10px] px-2 py-1 rounded-md border ${set.logged ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-zinc-500 border-zinc-200'}`}
+                          >
+                            {set.logged ? 'Logged' : 'Log'}
+                          </button>
                         </div>
                       );
                     })}
                     <button
                       onClick={() => {
                         const lastSet = sets[sets.length - 1];
-                        setSession({
+                        const next = {
                           ...session,
                           set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: ex, set_index: sets.length + 1, weight: lastSet?.weight || null, reps: lastSet?.reps || null, rpe: null, category: lastSet?.category || 'strength', distance: lastSet?.distance || null, duration_seconds: lastSet?.duration_seconds || null }]
-                        });
+                        };
+                        setSession(next);
                       }}
                       className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors py-1"
                     >
                       <Plus className="w-3 h-3" /> Add Set
                     </button>
-                  </div>
+                  </div>}
                 </div>
               );
             })}
@@ -435,10 +593,12 @@ export default function TodayPage() {
                 onClick={() => {
                   const name = window.prompt("Exercise name:");
                   if (name) {
-                    setSession({
+                    const next = {
                       ...session,
                       set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: name, set_index: 1, weight: null, reps: null, rpe: null }]
-                    });
+                    };
+                    setSession(next);
+                    setExpandedExercises(prev => ({ ...prev, [name]: true }));
                   }
                 }}
                 className="w-full py-3 border-2 border-dashed border-zinc-200 rounded-xl text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 transition-all flex items-center justify-center gap-2"
@@ -454,7 +614,7 @@ export default function TodayPage() {
           onClick={handleSave}
           className="w-full bg-zinc-950 text-white font-semibold rounded-xl py-4 mt-8 shadow-lg shadow-zinc-900/20 active:scale-[0.98] transition-all"
         >
-          Complete Workout
+          {savingInline ? 'Saving...' : 'Complete Workout'}
         </button>
       </div>
     </div>
