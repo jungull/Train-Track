@@ -51,25 +51,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'POST') {
             const { date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, set_entries, run_entries, emom_entries } = req.body;
 
-            const { data: existing } = await supabase.from('sessions').select('id').eq('date', date).single();
-            let sessionId: number;
+            const { data: upsertedSession, error: upsertErr } = await supabase
+                .from('sessions')
+                .upsert({ date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes }, { onConflict: 'date' })
+                .select('id')
+                .single();
 
-            if (existing) {
-                sessionId = existing.id;
-                await supabase.from('sessions').update({ bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes }).eq('id', sessionId);
-                await supabase.from('set_entries').delete().eq('session_id', sessionId);
-                await supabase.from('run_entries').delete().eq('session_id', sessionId);
-                await supabase.from('emom_entries').delete().eq('session_id', sessionId);
-            } else {
-                const { data: newSession, error } = await supabase.from('sessions')
-                    .insert({ date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes })
-                    .select('id').single();
-                if (error || !newSession) throw error || new Error('Insert failed');
-                sessionId = newSession.id;
-            }
+            if (upsertErr || !upsertedSession) throw upsertErr || new Error('Session upsert failed');
+            const sessionId: number = upsertedSession.id;
+
+            await supabase.from('set_entries').delete().eq('session_id', sessionId);
+            await supabase.from('run_entries').delete().eq('session_id', sessionId);
+            await supabase.from('emom_entries').delete().eq('session_id', sessionId);
 
             if (set_entries?.length > 0) {
-                const rows = set_entries.map((e: any) => ({
+                const baseRows = set_entries.map((e: any) => ({
                     session_id: sessionId,
                     block_title: e.block_title, exercise_name: e.exercise_name,
                     set_index: toNullableNumber(e.set_index),
@@ -81,8 +77,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     distance: toNullableNumber(e.distance),
                     duration_seconds: toNullableNumber(e.duration_seconds),
                 }));
-                const { error } = await supabase.from('set_entries').insert(rows);
-                if (error) throw error;
+
+                const withLogRows = set_entries.map((e: any, i: number) => ({
+                    ...baseRows[i],
+                    logged: e.logged ? 1 : 0,
+                    logged_at: e.logged_at || null,
+                }));
+
+                const withLogResult = await supabase.from('set_entries').insert(withLogRows);
+                if (withLogResult.error) {
+                    const missingLogColumns = /logged(_at)?/.test(String(withLogResult.error.message || ''));
+                    if (!missingLogColumns) throw withLogResult.error;
+
+                    const fallbackResult = await supabase.from('set_entries').insert(baseRows);
+                    if (fallbackResult.error) throw fallbackResult.error;
+                }
             }
 
             if (run_entries?.length > 0) {

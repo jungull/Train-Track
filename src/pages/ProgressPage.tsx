@@ -96,6 +96,32 @@ export default function ProgressPage() {
 
   useEffect(() => {
     fetchLog();
+
+    // Catch late-arriving writes from Today inline saves when users navigate quickly.
+    const retryFast = window.setTimeout(() => {
+      fetchLog();
+    }, 1200);
+
+    const retrySlow = window.setTimeout(() => {
+      fetchLog();
+    }, 3200);
+
+    const onFocus = () => {
+      fetchLog();
+    };
+    const onWorkoutLogUpdated = () => {
+      fetchLog();
+    };
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('workout-log-updated', onWorkoutLogUpdated);
+
+    return () => {
+      window.clearTimeout(retryFast);
+      window.clearTimeout(retrySlow);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('workout-log-updated', onWorkoutLogUpdated);
+    };
   }, []);
 
   const handleRename = async (oldName: string) => {
