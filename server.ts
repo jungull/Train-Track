@@ -45,7 +45,7 @@ db.exec(`
     created_at TEXT
   );
 
-  INSERT OR IGNORE INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams, created_at) VALUES
+  INSERT INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams, created_at) VALUES
     ('2026-02-20', 'Friday', 107, 211, 130, datetime('now')),
     ('2026-02-23', 'Monday', 88, 104, 41, datetime('now')),
     ('2026-02-24', 'Tuesday', 88, 164, 24, datetime('now')),
@@ -56,7 +56,12 @@ db.exec(`
     ('2026-03-03', 'Tuesday', 120, 247, 73, datetime('now')),
     ('2026-03-04', 'Wednesday', 176, 114, 76, datetime('now')),
     ('2026-03-05', 'Thursday', 226, 348, 127, datetime('now')),
-    ('2026-03-09', 'Monday', 112, 97, 38, datetime('now'));
+    ('2026-03-09', 'Monday', 168, 148, 75, datetime('now'))
+  ON CONFLICT(date) DO UPDATE SET
+    weekday = excluded.weekday,
+    protein_grams = excluded.protein_grams,
+    carbs_grams = excluded.carbs_grams,
+    fat_grams = excluded.fat_grams;
 
   CREATE TABLE IF NOT EXISTS set_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,6 +136,12 @@ try { db.exec(`ALTER TABLE settings ADD COLUMN gtg_plank_enabled INTEGER DEFAULT
 try { db.exec(`ALTER TABLE set_entries ADD COLUMN category TEXT DEFAULT 'strength'`); } catch { }
 try { db.exec(`ALTER TABLE set_entries ADD COLUMN distance REAL`); } catch { }
 try { db.exec(`ALTER TABLE set_entries ADD COLUMN duration_seconds INTEGER`); } catch { }
+
+// Migrations: add nutrition and check-in fields to sessions
+try { db.exec(`ALTER TABLE sessions ADD COLUMN waist_circumference REAL`); } catch { }
+try { db.exec(`ALTER TABLE sessions ADD COLUMN calories_protein INTEGER`); } catch { }
+try { db.exec(`ALTER TABLE sessions ADD COLUMN calories_carbs INTEGER`); } catch { }
+try { db.exec(`ALTER TABLE sessions ADD COLUMN calories_fats INTEGER`); } catch { }
 
 const app = express();
 app.use(express.json());
@@ -209,32 +220,39 @@ app.get('/api/best-1rm', (req, res) => {
 });
 
 // Sessions
-app.get('/api/sessions/:date', (req, res) => {
-  const { date } = req.params;
+function getSessionByDate(date: string) {
   const session = db.prepare('SELECT * FROM sessions WHERE date = ?').get(date) as any;
-  if (!session) {
-    return res.json(null);
-  }
+  if (!session) return null;
   const set_entries = db.prepare('SELECT * FROM set_entries WHERE session_id = ?').all(session.id);
   const run_entries = db.prepare('SELECT * FROM run_entries WHERE session_id = ?').all(session.id);
   const emom_entries = db.prepare('SELECT * FROM emom_entries WHERE session_id = ?').all(session.id);
-  res.json({ ...session, set_entries, run_entries, emom_entries });
+  return { ...session, set_entries, run_entries, emom_entries };
+}
+
+app.get('/api/sessions', (req, res) => {
+  const date = String(req.query.date || '');
+  if (!date) return res.status(400).json({ error: 'date query param required' });
+  res.json(getSessionByDate(date));
+});
+
+app.get('/api/sessions/:date', (req, res) => {
+  res.json(getSessionByDate(req.params.date));
 });
 
 app.post('/api/sessions', (req, res) => {
-  const { date, weekday, bodyweight, notes, set_entries, run_entries, emom_entries } = req.body;
+  const { date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, set_entries, run_entries, emom_entries } = req.body;
 
   const transaction = db.transaction(() => {
     let session = db.prepare('SELECT id FROM sessions WHERE date = ?').get(date) as any;
     let sessionId;
     if (session) {
       sessionId = session.id;
-      db.prepare('UPDATE sessions SET bodyweight = ?, notes = ? WHERE id = ?').run(bodyweight, notes, sessionId);
+      db.prepare('UPDATE sessions SET bodyweight = ?, waist_circumference = ?, calories_protein = ?, calories_carbs = ?, calories_fats = ?, notes = ? WHERE id = ?').run(bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, sessionId);
       db.prepare('DELETE FROM set_entries WHERE session_id = ?').run(sessionId);
       db.prepare('DELETE FROM run_entries WHERE session_id = ?').run(sessionId);
       db.prepare('DELETE FROM emom_entries WHERE session_id = ?').run(sessionId);
     } else {
-      const result = db.prepare('INSERT INTO sessions (date, weekday, bodyweight, notes, created_at) VALUES (?, ?, ?, ?, datetime("now"))').run(date, weekday, bodyweight, notes);
+      const result = db.prepare('INSERT INTO sessions (date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime("now"))').run(date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes);
       sessionId = result.lastInsertRowid;
     }
 
@@ -274,7 +292,9 @@ app.get('/api/progress', (req, res) => {
   const set_entries = db.prepare('SELECT * FROM set_entries').all();
   const run_entries = db.prepare('SELECT * FROM run_entries').all();
   const gtg_events = db.prepare('SELECT * FROM gtg_events').all();
-  res.json({ sessions, set_entries, run_entries, gtg_events });
+  const emom_entries = db.prepare('SELECT * FROM emom_entries').all();
+  const nutrition_history = db.prepare('SELECT * FROM nutrition_history ORDER BY date ASC').all();
+  res.json({ sessions, set_entries, run_entries, gtg_events, emom_entries, nutrition_history });
 });
 
 // Exercise Log & Rename
