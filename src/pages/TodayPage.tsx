@@ -250,18 +250,6 @@ export default function TodayPage() {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      if (inFlightSaveRef.current) {
-        await inFlightSaveRef.current;
-      }
-      await saveSessionToApi(sessionRef.current ?? session);
-      navigate('/progress');
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const moveExercise = (fromName: string, toName: string) => {
     if (fromName === toName) return;
     setExerciseOrder(prev => {
@@ -560,13 +548,13 @@ export default function TodayPage() {
                         );
                       })}
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const lastSet = sets[sets.length - 1];
                           const next = {
                             ...session,
                             set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: ex, set_index: sets.length + 1, weight: lastSet?.weight || null, reps: lastSet?.reps || null, rpe: null, category: lastSet?.category || 'strength', distance: lastSet?.distance || null, duration_seconds: lastSet?.duration_seconds || null }]
                           };
-                          setSession(next);
+                          await persistSession(next);
                         }}
                         className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors py-1"
                       >
@@ -585,14 +573,14 @@ export default function TodayPage() {
 
             <div className="pt-4 border-t border-zinc-100">
               <button
-                onClick={() => {
+                onClick={async () => {
                   const name = window.prompt('Exercise name:');
                   if (name) {
                     const next = {
                       ...session,
-                      set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: name, set_index: 1, weight: null, reps: null, rpe: null }]
+                      set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: name, set_index: 1, weight: null, reps: null, rpe: null, category: 'strength', logged: 0, logged_at: null }]
                     };
-                    setSession(next);
+                    await persistSession(next);
                     setExpandedExercises(prev => ({ ...prev, [name]: true }));
                   }
                 }}
@@ -604,12 +592,7 @@ export default function TodayPage() {
           </div>
         </section>
 
-        <button
-          onClick={handleSave}
-          className="w-full bg-zinc-950 text-white font-semibold rounded-xl py-4 mt-8 shadow-lg shadow-zinc-900/20 active:scale-[0.98] transition-all"
-        >
-          {savingInline ? 'Saving...' : 'Complete Workout'}
-        </button>
+        <p className="text-xs text-center text-zinc-500">{savingInline ? 'Saving changes…' : 'Sets save when you tap Log.'}</p>
       </div>
     </div>
   );
