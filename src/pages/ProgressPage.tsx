@@ -109,12 +109,18 @@ export default function ProgressPage() {
     const onFocus = () => {
       fetchLog();
     };
+    const onWorkoutLogUpdated = () => {
+      fetchLog();
+    };
+
     window.addEventListener('focus', onFocus);
+    window.addEventListener('workout-log-updated', onWorkoutLogUpdated);
 
     return () => {
       window.clearTimeout(retryFast);
       window.clearTimeout(retrySlow);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('workout-log-updated', onWorkoutLogUpdated);
     };
   }, []);
 

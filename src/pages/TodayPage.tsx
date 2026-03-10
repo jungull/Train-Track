@@ -207,6 +207,9 @@ export default function TodayPage() {
       const errorText = await response.text();
       throw new Error(`Session save failed (${response.status}): ${errorText}`);
     }
+
+    // Notify other screens (e.g. Progress/Log) to refresh immediately.
+    window.dispatchEvent(new CustomEvent('workout-log-updated', { detail: { date: nextSession?.date } }));
   };
 
   useEffect(() => {
