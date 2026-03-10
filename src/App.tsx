@@ -57,7 +57,8 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   const location = useLocation();
-  const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+  const isHomeAlias = to === '/' && location.pathname === '/dashboard';
+  const isActive = isHomeAlias || location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
 
   return (
     <Link
@@ -79,6 +80,7 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<HomePage />} />
           <Route path="/today" element={<TodayPage />} />
           <Route path="/gtg" element={<GTGPage />} />
           <Route path="/program" element={<ProgramPage />} />

@@ -38,10 +38,27 @@ export default function HomePage() {
           fetch('/api/progress'),
           fetch(`/api/sessions?date=${todayStr}`),
         ]);
-        const progressData = await progressRes.json();
-        const sessionData = await sessionRes.json();
 
-        setProgress(progressData || { sessions: [], set_entries: [], run_entries: [], gtg_events: [] });
+        const progressData = progressRes.ok ? await progressRes.json() : null;
+        const sessionData = sessionRes.ok ? await sessionRes.json() : null;
+
+        const needsNutritionFallback = !Array.isArray(progressData?.nutrition_history);
+        let nutritionFallback: any[] = [];
+        if (needsNutritionFallback) {
+          const nutritionRes = await fetch('/api/nutrition-history');
+          nutritionFallback = nutritionRes.ok ? await nutritionRes.json() : [];
+        }
+
+        const normalizedProgress = {
+          sessions: progressData?.sessions || [],
+          set_entries: progressData?.set_entries || [],
+          run_entries: progressData?.run_entries || [],
+          gtg_events: progressData?.gtg_events || [],
+          emom_entries: progressData?.emom_entries || [],
+          nutrition_history: Array.isArray(progressData?.nutrition_history) ? progressData.nutrition_history : (nutritionFallback || []),
+        };
+
+        setProgress(normalizedProgress);
         setTodaySession(sessionData);
         setBodyweight(sessionData?.bodyweight ? String(sessionData.bodyweight) : '');
         setWaist(sessionData?.waist_circumference ? String(sessionData.waist_circumference) : '');
@@ -71,6 +88,23 @@ export default function HomePage() {
     }
 
     if (selectedMetric === 'calories') {
+      const nutritionRows = [...(progress.nutrition_history || [])]
+        .map((row: any) => {
+          const macroCalories = ((Number(row.protein_grams) || 0) * 4) + ((Number(row.carbs_grams) || 0) * 4) + ((Number(row.fat_grams) || 0) * 9);
+          const directCalories = Number(row.calories) || 0;
+          const totalCalories = directCalories > 0 ? directCalories : macroCalories;
+          return {
+            date: row.date,
+            value: Math.round(totalCalories * 10) / 10,
+          };
+        })
+        .filter((r: any) => r.date && r.value > 0)
+        .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+      if (nutritionRows.length > 0) {
+        return nutritionRows.map((r: any) => ({ date: r.date.slice(5), value: r.value }));
+      }
+
       return sessions
         .map((s: any) => ({
           date: s.date.slice(5),
