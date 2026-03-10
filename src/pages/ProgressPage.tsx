@@ -96,6 +96,13 @@ export default function ProgressPage() {
 
   useEffect(() => {
     fetchLog();
+
+    // Catch late-arriving writes from Today inline saves when users navigate quickly.
+    const retry = window.setTimeout(() => {
+      fetchLog();
+    }, 1200);
+
+    return () => window.clearTimeout(retry);
   }, []);
 
   const handleRename = async (oldName: string) => {
