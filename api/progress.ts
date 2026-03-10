@@ -33,12 +33,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const emomRes = await supabase.from('emom_entries').select('*');
         if (emomRes.error) throw emomRes.error;
 
+        const nutritionRes = await supabase.from('nutrition_history').select('*').order('date', { ascending: true });
+        if (nutritionRes.error) throw nutritionRes.error;
+
         res.json({
             sessions: sessionsRes.data || [],
             set_entries: setRes.data || [],
             run_entries: runRes.data || [],
             gtg_events: gtgRes.data || [],
             emom_entries: emomRes.data || [],
+            nutrition_history: nutritionRes.data || [],
         });
     } catch (err: any) {
         res.status(500).json({
