@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { format, getDay } from 'date-fns';
+import { Check } from 'lucide-react';
 
 type MetricKey = 'bodyweight' | 'calories' | 'run' | 'pushups' | 'plank' | 'pullups';
 
@@ -16,13 +18,30 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>('bodyweight');
   const [progress, setProgress] = useState<any>({ sessions: [], set_entries: [], run_entries: [], gtg_events: [] });
+  const [todaySession, setTodaySession] = useState<any>(null);
+  const [bodyweight, setBodyweight] = useState('');
+  const [waist, setWaist] = useState('');
+  const [calories, setCalories] = useState('');
+  const [savingKey, setSavingKey] = useState<'bodyweight' | 'waist' | 'calories' | null>(null);
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/progress');
-        const data = await res.json();
-        setProgress(data || { sessions: [], set_entries: [], run_entries: [], gtg_events: [] });
+        const [progressRes, sessionRes] = await Promise.all([
+          fetch('/api/progress'),
+          fetch(`/api/sessions?date=${todayStr}`),
+        ]);
+        const progressData = await progressRes.json();
+        const sessionData = await sessionRes.json();
+
+        setProgress(progressData || { sessions: [], set_entries: [], run_entries: [], gtg_events: [] });
+        setTodaySession(sessionData);
+        setBodyweight(sessionData?.bodyweight ? String(sessionData.bodyweight) : '');
+        setWaist(sessionData?.waist_circumference ? String(sessionData.waist_circumference) : '');
+        const totalCalories = (sessionData?.calories_protein || 0) + (sessionData?.calories_carbs || 0) + (sessionData?.calories_fats || 0);
+        setCalories(totalCalories > 0 ? String(Math.round(totalCalories)) : '');
       } catch (err) {
         console.error(err);
       } finally {
@@ -30,7 +49,7 @@ export default function HomePage() {
       }
     }
     load();
-  }, []);
+  }, [todayStr]);
 
   const sessionDateMap = useMemo(
     () => Object.fromEntries((progress.sessions || []).map((s: any) => [s.id, s.date])),
@@ -101,6 +120,48 @@ export default function HomePage() {
 
   const activeMeta = METRICS.find((m) => m.key === selectedMetric)!;
 
+  const hasBodyweight = Number(todaySession?.bodyweight) > 0;
+  const hasWaist = Number(todaySession?.waist_circumference) > 0;
+  const hasCalories = Number((todaySession?.calories_protein || 0) + (todaySession?.calories_carbs || 0) + (todaySession?.calories_fats || 0)) > 0;
+
+  const saveMetric = async (key: 'bodyweight' | 'waist' | 'calories') => {
+    const existing = todaySession || {
+      date: todayStr,
+      weekday: getDay(new Date()),
+      set_entries: [],
+      run_entries: [],
+      emom_entries: [],
+      bodyweight: null,
+      waist_circumference: null,
+      calories_protein: null,
+      calories_carbs: null,
+      calories_fats: null,
+    };
+
+    const payload = {
+      ...existing,
+      bodyweight: key === 'bodyweight' ? (parseFloat(bodyweight) || null) : (existing.bodyweight ?? null),
+      waist_circumference: key === 'waist' ? (parseFloat(waist) || null) : (existing.waist_circumference ?? null),
+      calories_protein: key === 'calories' ? null : (existing.calories_protein ?? null),
+      calories_fats: key === 'calories' ? null : (existing.calories_fats ?? null),
+      calories_carbs: key === 'calories' ? (parseInt(calories) || null) : (existing.calories_carbs ?? null),
+    };
+
+    setSavingKey(key);
+    try {
+      await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      setTodaySession(payload);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
   if (loading) return <div className="p-6 text-center text-zinc-500">Loading dashboard...</div>;
 
   return (
@@ -108,6 +169,31 @@ export default function HomePage() {
       <section className="bg-white rounded-2xl p-4 border border-zinc-100 shadow-sm">
         <h1 className="text-xl font-bold tracking-tight text-zinc-900">Dashboard</h1>
         <p className="text-xs text-zinc-500 mt-1">Track your key performance trends in one place.</p>
+      </section>
+
+      <section className="bg-white rounded-2xl p-4 border border-zinc-100 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-zinc-800">Daily check-in</h2>
+
+        <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+          <input type="number" step="0.1" value={bodyweight} onChange={(e) => setBodyweight(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm" placeholder="Bodyweight (lb)" />
+          <button onClick={() => saveMetric('bodyweight')} disabled={hasBodyweight || savingKey === 'bodyweight'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasBodyweight ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
+            {hasBodyweight ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span> : savingKey === 'bodyweight' ? 'Saving...' : 'Submit'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+          <input type="number" step="0.1" value={waist} onChange={(e) => setWaist(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm" placeholder="Waist (in)" />
+          <button onClick={() => saveMetric('waist')} disabled={hasWaist || savingKey === 'waist'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasWaist ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
+            {hasWaist ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span> : savingKey === 'waist' ? 'Saving...' : 'Submit'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+          <input type="number" value={calories} onChange={(e) => setCalories(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm" placeholder="Calories" />
+          <button onClick={() => saveMetric('calories')} disabled={hasCalories || savingKey === 'calories'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasCalories ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
+            {hasCalories ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span> : savingKey === 'calories' ? 'Saving...' : 'Submit'}
+          </button>
+        </div>
       </section>
 
       <section className="bg-white rounded-2xl p-4 border border-zinc-100 shadow-sm space-y-3">
