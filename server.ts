@@ -45,7 +45,7 @@ db.exec(`
     created_at TEXT
   );
 
-  INSERT OR IGNORE INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams, created_at) VALUES
+  INSERT INTO nutrition_history (date, weekday, protein_grams, carbs_grams, fat_grams, created_at) VALUES
     ('2026-02-20', 'Friday', 107, 211, 130, datetime('now')),
     ('2026-02-23', 'Monday', 88, 104, 41, datetime('now')),
     ('2026-02-24', 'Tuesday', 88, 164, 24, datetime('now')),
@@ -56,7 +56,12 @@ db.exec(`
     ('2026-03-03', 'Tuesday', 120, 247, 73, datetime('now')),
     ('2026-03-04', 'Wednesday', 176, 114, 76, datetime('now')),
     ('2026-03-05', 'Thursday', 226, 348, 127, datetime('now')),
-    ('2026-03-09', 'Monday', 112, 97, 38, datetime('now'));
+    ('2026-03-09', 'Monday', 168, 148, 75, datetime('now'))
+  ON CONFLICT(date) DO UPDATE SET
+    weekday = excluded.weekday,
+    protein_grams = excluded.protein_grams,
+    carbs_grams = excluded.carbs_grams,
+    fat_grams = excluded.fat_grams;
 
   CREATE TABLE IF NOT EXISTS set_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
