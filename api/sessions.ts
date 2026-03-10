@@ -16,6 +16,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const supabase = await getSupabase();
 
+        const toNullableNumber = (value: any) => {
+            if (value === null || value === undefined || value === '') return null;
+            const parsed = typeof value === 'number' ? value : Number(value);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
+
         // GET /api/sessions?date=2024-01-15 → fetch one session
         if (req.method === 'GET') {
             const date = req.query.date as string;
@@ -66,12 +72,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const rows = set_entries.map((e: any) => ({
                     session_id: sessionId,
                     block_title: e.block_title, exercise_name: e.exercise_name,
-                    set_index: e.set_index, weight: e.weight, reps: e.reps,
-                    rpe: e.rpe, notes: e.notes,
+                    set_index: toNullableNumber(e.set_index),
+                    weight: toNullableNumber(e.weight),
+                    reps: toNullableNumber(e.reps),
+                    rpe: toNullableNumber(e.rpe),
+                    notes: e.notes,
                     category: e.category || 'strength',
-                    distance: e.distance || null, duration_seconds: e.duration_seconds || null,
+                    distance: toNullableNumber(e.distance),
+                    duration_seconds: toNullableNumber(e.duration_seconds),
                 }));
-                await supabase.from('set_entries').insert(rows);
+                const { error } = await supabase.from('set_entries').insert(rows);
+                if (error) throw error;
             }
 
             if (run_entries?.length > 0) {
@@ -79,19 +90,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     session_id: sessionId,
                     block_title: e.block_title, run_type: e.run_type,
                     target_pace: e.target_pace, actual_pace: e.actual_pace,
-                    duration_seconds: e.duration_seconds, distance: e.distance,
-                    rpe: e.rpe, notes: e.notes,
+                    duration_seconds: toNullableNumber(e.duration_seconds),
+                    distance: toNullableNumber(e.distance),
+                    rpe: toNullableNumber(e.rpe),
+                    notes: e.notes,
                 }));
-                await supabase.from('run_entries').insert(rows);
+                const { error } = await supabase.from('run_entries').insert(rows);
+                if (error) throw error;
             }
 
             if (emom_entries?.length > 0) {
                 const rows = emom_entries.map((e: any) => ({
                     session_id: sessionId,
                     block_title: e.block_title, target_reps: e.target_reps,
-                    minutes: e.minutes, completed_minutes: e.completed_minutes,
+                    minutes: toNullableNumber(e.minutes),
+                    completed_minutes: toNullableNumber(e.completed_minutes),
                 }));
-                await supabase.from('emom_entries').insert(rows);
+                const { error } = await supabase.from('emom_entries').insert(rows);
+                if (error) throw error;
             }
 
             return res.json({ success: true });
