@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { format, subDays, getDay, parseISO } from 'date-fns';
 import { ChevronLeft, ListTodo, Plus, Check, Info, ChevronDown, ChevronUp, Trash2, GripVertical } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -253,6 +253,43 @@ export default function TodayPage() {
     });
   };
 
+
+  const knownExerciseNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const name of exerciseOrder) {
+      if (name) names.add(String(name));
+    }
+    for (const row of recentExercises) {
+      if (row?.exercise_name) names.add(String(row.exercise_name));
+    }
+    for (const entry of session?.set_entries || []) {
+      if (entry?.exercise_name) names.add(String(entry.exercise_name));
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [exerciseOrder, recentExercises, session?.set_entries]);
+
+  const renameExercise = (currentName: string, nextNameRaw: string) => {
+    const nextName = nextNameRaw.trim();
+    if (!nextName || nextName === currentName) return;
+
+    const nextEntries = (session.set_entries || []).map((entry: any) =>
+      entry.exercise_name === currentName ? { ...entry, exercise_name: nextName } : entry,
+    );
+
+    const nextOrder: string[] = [];
+    for (const name of exerciseOrder) {
+      const mapped = name === currentName ? nextName : name;
+      if (!nextOrder.includes(mapped)) nextOrder.push(mapped);
+    }
+
+    setSession({ ...session, set_entries: normalizeSetIndices(nextEntries) });
+    setExerciseOrder(nextOrder);
+    setCompletedExercises((prev) => {
+      const mapped = prev.map((name) => (name === currentName ? nextName : name));
+      return mapped.filter((name, index) => mapped.indexOf(name) === index);
+    });
+  };
+
   const getRecommendation = (exerciseName: string) => {
     const recent = recentExercises.find(e => e.exercise_name === exerciseName);
     if (!recent) return null;
@@ -356,18 +393,27 @@ export default function TodayPage() {
                         </button>
                         {isEditingExercises && (
                           <>
-                            <button
-                              onClick={() => {
-                                const nextName = window.prompt('Rename exercise:', ex);
-                                if (!nextName || nextName === ex) return;
-                                const nextEntries = (session.set_entries || []).map((entry: any) => entry.exercise_name === ex ? { ...entry, exercise_name: nextName } : entry);
-                                setSession({ ...session, set_entries: normalizeSetIndices(nextEntries) });
-                                setExerciseOrder(prev => prev.map(name => name === ex ? nextName : name));
-                              }}
-                              className="text-[11px] px-2 py-1 rounded-md border bg-white text-zinc-600 border-zinc-200"
-                            >
-                              Rename
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <input
+                                list="exercise-name-options"
+                                defaultValue={ex}
+                                onKeyDown={(e) => {
+                                  if (e.key !== 'Enter') return;
+                                  renameExercise(ex, (e.currentTarget as HTMLInputElement).value);
+                                }}
+                                className="w-32 bg-white border border-zinc-200 rounded-md px-2 py-1 text-[11px] text-zinc-700"
+                                aria-label={`Rename ${ex}`}
+                              />
+                              <button
+                                onClick={(e) => {
+                                  const input = (e.currentTarget.previousElementSibling as HTMLInputElement | null);
+                                  renameExercise(ex, input?.value || ex);
+                                }}
+                                className="text-[11px] px-2 py-1 rounded-md border bg-white text-zinc-600 border-zinc-200"
+                              >
+                                Save
+                              </button>
+                            </div>
                             <button
                               onClick={() => {
                                 const nextEntries = (session.set_entries || []).filter((entry: any) => entry.exercise_name !== ex);
@@ -399,7 +445,7 @@ export default function TodayPage() {
                                   const newSets = [...session.set_entries];
                                   newSets[globalIdx].weight = parseFloat(e.target.value);
                                   setSession({ ...session, set_entries: newSets });
-                                }} className="flex-1 min-w-0 bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 text-sm font-mono focus:ring-1 focus:ring-zinc-900" />
+                                }} className="w-24 min-w-[5.5rem] shrink-0 bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 text-sm font-mono focus:ring-1 focus:ring-zinc-900" />
                                 <span className="text-zinc-400 text-xs shrink-0">×</span>
                               </>
                             )}
@@ -503,6 +549,12 @@ export default function TodayPage() {
                   </div>
                 );
               })}
+
+            <datalist id="exercise-name-options">
+              {knownExerciseNames.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
 
             <div className="pt-4 border-t border-zinc-100">
               <button

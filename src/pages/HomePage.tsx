@@ -125,6 +125,14 @@ export default function HomePage() {
 
   const activeMeta = METRICS.find((m) => m.key === selectedMetric)!;
 
+  const yAxisDomain = useMemo<[number, number] | undefined>(() => {
+    if (selectedMetric !== 'bodyweight' || chartData.length === 0) return undefined;
+    const values = chartData.map((point: { value: number }) => point.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    return [minValue - 5, maxValue + 5];
+  }, [chartData, selectedMetric]);
+
   const hasBodyweight = Number(todaySession?.bodyweight) > 0;
   const hasWaist = Number(todaySession?.waist_circumference) > 0;
   const hasCalories = Number((todaySession?.calories_protein || 0) + (todaySession?.calories_carbs || 0) + (todaySession?.calories_fats || 0)) > 0;
@@ -239,7 +247,7 @@ export default function HomePage() {
               <LineChart data={chartData} margin={{ top: 12, right: 8, left: -14, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
                 <XAxis dataKey="date" fontSize={11} stroke="#71717a" />
-                <YAxis fontSize={11} stroke="#71717a" />
+                <YAxis fontSize={11} stroke="#71717a" domain={yAxisDomain} />
                 <Tooltip />
                 <Line type="monotone" dataKey="value" stroke={activeMeta.accent} strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
