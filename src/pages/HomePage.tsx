@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, getDay } from 'date-fns';
-import { Check } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 
 type MetricKey = 'bodyweight' | 'calories' | 'run' | 'pushups' | 'plank' | 'pullups';
 
@@ -23,6 +23,11 @@ export default function HomePage() {
   const [waist, setWaist] = useState('');
   const [calories, setCalories] = useState('');
   const [savingKey, setSavingKey] = useState<'bodyweight' | 'waist' | 'calories' | null>(null);
+  const [editMode, setEditMode] = useState<Record<'bodyweight' | 'waist' | 'calories', boolean>>({
+    bodyweight: false,
+    waist: false,
+    calories: false,
+  });
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
@@ -155,11 +160,29 @@ export default function HomePage() {
         body: JSON.stringify(payload),
       });
       setTodaySession(payload);
+      setProgress((prev: any) => {
+        const nextSessions = [...(prev.sessions || [])];
+        const idx = nextSessions.findIndex((s: any) => s.date === todayStr);
+        const merged = { ...(idx >= 0 ? nextSessions[idx] : {}), ...payload };
+        if (idx >= 0) nextSessions[idx] = merged;
+        else nextSessions.push(merged);
+
+        return { ...prev, sessions: nextSessions };
+      });
+      setEditMode((prev) => ({ ...prev, [key]: false }));
     } catch (err) {
       console.error(err);
     } finally {
       setSavingKey(null);
     }
+  };
+
+  const handleMetricAction = (key: 'bodyweight' | 'waist' | 'calories', hasValue: boolean) => {
+    if (hasValue && !editMode[key]) {
+      setEditMode((prev) => ({ ...prev, [key]: true }));
+      return;
+    }
+    saveMetric(key);
   };
 
   if (loading) return <div className="p-6 text-center text-zinc-500">Loading dashboard...</div>;
@@ -175,23 +198,23 @@ export default function HomePage() {
         <h2 className="text-sm font-semibold text-zinc-800">Daily check-in</h2>
 
         <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-          <input type="number" step="0.1" value={bodyweight} onChange={(e) => setBodyweight(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm" placeholder="Bodyweight (lb)" />
-          <button onClick={() => saveMetric('bodyweight')} disabled={hasBodyweight || savingKey === 'bodyweight'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasBodyweight ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
-            {hasBodyweight ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span> : savingKey === 'bodyweight' ? 'Saving...' : 'Submit'}
+          <input type="number" step="0.1" value={bodyweight} disabled={hasBodyweight && !editMode.bodyweight} onChange={(e) => setBodyweight(e.target.value)} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasBodyweight && !editMode.bodyweight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Bodyweight (lb)" />
+          <button onClick={() => handleMetricAction('bodyweight', hasBodyweight)} disabled={savingKey === 'bodyweight'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasBodyweight && !editMode.bodyweight ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
+            {savingKey === 'bodyweight' ? 'Saving...' : hasBodyweight && !editMode.bodyweight ? <span className="inline-flex items-center gap-1"><Pencil className="w-3.5 h-3.5" /> Edit</span> : hasBodyweight ? 'Save edit' : 'Submit'}
           </button>
         </div>
 
         <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-          <input type="number" step="0.1" value={waist} onChange={(e) => setWaist(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm" placeholder="Waist (in)" />
-          <button onClick={() => saveMetric('waist')} disabled={hasWaist || savingKey === 'waist'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasWaist ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
-            {hasWaist ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span> : savingKey === 'waist' ? 'Saving...' : 'Submit'}
+          <input type="number" step="0.1" value={waist} disabled={hasWaist && !editMode.waist} onChange={(e) => setWaist(e.target.value)} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasWaist && !editMode.waist ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Waist (in)" />
+          <button onClick={() => handleMetricAction('waist', hasWaist)} disabled={savingKey === 'waist'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasWaist && !editMode.waist ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
+            {savingKey === 'waist' ? 'Saving...' : hasWaist && !editMode.waist ? <span className="inline-flex items-center gap-1"><Pencil className="w-3.5 h-3.5" /> Edit</span> : hasWaist ? 'Save edit' : 'Submit'}
           </button>
         </div>
 
         <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-          <input type="number" value={calories} onChange={(e) => setCalories(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm" placeholder="Calories" />
-          <button onClick={() => saveMetric('calories')} disabled={hasCalories || savingKey === 'calories'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasCalories ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
-            {hasCalories ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span> : savingKey === 'calories' ? 'Saving...' : 'Submit'}
+          <input type="number" value={calories} disabled={hasCalories && !editMode.calories} onChange={(e) => setCalories(e.target.value)} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasCalories && !editMode.calories ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Calories" />
+          <button onClick={() => handleMetricAction('calories', hasCalories)} disabled={savingKey === 'calories'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasCalories && !editMode.calories ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
+            {savingKey === 'calories' ? 'Saving...' : hasCalories && !editMode.calories ? <span className="inline-flex items-center gap-1"><Pencil className="w-3.5 h-3.5" /> Edit</span> : hasCalories ? 'Save edit' : 'Submit'}
           </button>
         </div>
       </section>
