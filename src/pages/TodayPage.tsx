@@ -544,7 +544,12 @@ export default function TodayPage() {
                             <button
                               onClick={async () => {
                                 const nextEntries = [...session.set_entries];
-                                nextEntries[globalIdx] = { ...nextEntries[globalIdx], logged: !nextEntries[globalIdx]?.logged };
+                                const currentlyLogged = Boolean(nextEntries[globalIdx]?.logged);
+                                nextEntries[globalIdx] = {
+                                  ...nextEntries[globalIdx],
+                                  logged: !currentlyLogged,
+                                  logged_at: !currentlyLogged ? new Date().toISOString() : null,
+                                };
                                 await persistSession({ ...session, set_entries: nextEntries });
                               }}
                               className={`text-[10px] px-2 py-1 rounded-md border ${set.logged ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-zinc-500 border-zinc-200'}`}
