@@ -240,6 +240,11 @@ export default function TodayPage() {
 
     try {
       await savePromise;
+      window.dispatchEvent(new CustomEvent('workout-log-updated', {
+        detail: {
+          date: nextSession?.date,
+        },
+      }));
     } catch (err) {
       console.error(err);
     } finally {

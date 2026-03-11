@@ -44,8 +44,11 @@ export default function ProgressPage() {
   const [entries, setEntries] = useState<ExerciseLogEntry[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('strength');
-  const [viewMode, setViewMode] = useState<'log' | 'trends'>('log');
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('progress-active-tab') || 'strength');
+  const [viewMode, setViewMode] = useState<'log' | 'trends'>(() => {
+    const saved = sessionStorage.getItem('progress-view-mode');
+    return saved === 'trends' ? 'trends' : 'log';
+  });
 
   // Edit State
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
@@ -64,8 +67,12 @@ export default function ProgressPage() {
 
       const sessionMap = Object.fromEntries(s.map((sess: any) => [sess.id, sess.date]));
 
+      const loggedSetEntries = (set_entries || []).filter((e: any) =>
+        e.logged === undefined || e.logged === null || Number(e.logged) === 1
+      );
+
       const unified: ExerciseLogEntry[] = [
-        ...(set_entries || []).map((e: any) => ({ ...e, date: sessionMap[e.session_id] || 'Unknown' })),
+        ...loggedSetEntries.map((e: any) => ({ ...e, date: sessionMap[e.session_id] || 'Unknown' })),
         ...(run_entries || []).map((e: any) => ({
           ...e,
           exercise_name: e.run_type,
@@ -123,6 +130,14 @@ export default function ProgressPage() {
       window.removeEventListener('workout-log-updated', onWorkoutLogUpdated);
     };
   }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem('progress-active-tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem('progress-view-mode', viewMode);
+  }, [viewMode]);
 
   const handleRename = async (oldName: string) => {
     if (!editName.trim() || editName === oldName) {
