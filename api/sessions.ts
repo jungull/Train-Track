@@ -51,20 +51,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'POST') {
             const { date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, set_entries, run_entries, emom_entries } = req.body;
 
+            const updatePayload: any = { date, weekday };
+            if (bodyweight !== undefined) updatePayload.bodyweight = bodyweight;
+            if (waist_circumference !== undefined) updatePayload.waist_circumference = waist_circumference;
+            if (calories_protein !== undefined) updatePayload.calories_protein = calories_protein;
+            if (calories_carbs !== undefined) updatePayload.calories_carbs = calories_carbs;
+            if (calories_fats !== undefined) updatePayload.calories_fats = calories_fats;
+            if (notes !== undefined) updatePayload.notes = notes;
+
             const { data: upsertedSession, error: upsertErr } = await supabase
                 .from('sessions')
-                .upsert({ date, weekday, bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes }, { onConflict: 'date' })
+                .upsert(updatePayload, { onConflict: 'date' })
                 .select('id')
                 .single();
 
             if (upsertErr || !upsertedSession) throw upsertErr || new Error('Session upsert failed');
             const sessionId: number = upsertedSession.id;
 
-            await supabase.from('set_entries').delete().eq('session_id', sessionId);
-            await supabase.from('run_entries').delete().eq('session_id', sessionId);
-            await supabase.from('emom_entries').delete().eq('session_id', sessionId);
-
-            if (set_entries?.length > 0) {
+            if (set_entries !== undefined) {
+                await supabase.from('set_entries').delete().eq('session_id', sessionId);
+                if (set_entries.length > 0) {
                 const baseRows = set_entries.map((e: any) => ({
                     session_id: sessionId,
                     block_title: e.block_title, exercise_name: e.exercise_name,
@@ -93,11 +99,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     if (fallbackResult.error) throw fallbackResult.error;
                 }
             }
+            }
 
-            if (run_entries?.length > 0) {
-                const rows = run_entries.map((e: any) => ({
-                    session_id: sessionId,
-                    block_title: e.block_title, run_type: e.run_type,
+            if (run_entries !== undefined) {
+                await supabase.from('run_entries').delete().eq('session_id', sessionId);
+                if (run_entries.length > 0) {
+                    const rows = run_entries.map((e: any) => ({
+                        session_id: sessionId,
+                        block_title: e.block_title, run_type: e.run_type,
                     target_pace: e.target_pace, actual_pace: e.actual_pace,
                     duration_seconds: toNullableNumber(e.duration_seconds),
                     distance: toNullableNumber(e.distance),
@@ -106,17 +115,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }));
                 const { error } = await supabase.from('run_entries').insert(rows);
                 if (error) throw error;
+                }
             }
 
-            if (emom_entries?.length > 0) {
-                const rows = emom_entries.map((e: any) => ({
-                    session_id: sessionId,
-                    block_title: e.block_title, target_reps: e.target_reps,
+            if (emom_entries !== undefined) {
+                await supabase.from('emom_entries').delete().eq('session_id', sessionId);
+                if (emom_entries.length > 0) {
+                    const rows = emom_entries.map((e: any) => ({
+                        session_id: sessionId,
+                        block_title: e.block_title, target_reps: e.target_reps,
                     minutes: toNullableNumber(e.minutes),
                     completed_minutes: toNullableNumber(e.completed_minutes),
                 }));
                 const { error } = await supabase.from('emom_entries').insert(rows);
                 if (error) throw error;
+                }
             }
 
             return res.json({ success: true });

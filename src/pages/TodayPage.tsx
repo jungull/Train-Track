@@ -256,10 +256,11 @@ export default function TodayPage() {
   useEffect(() => {
     return () => {
       if (sessionRef.current) {
+        const { bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, ...safeSession } = sessionRef.current;
         fetch('/api/sessions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sessionRef.current),
+          body: JSON.stringify(safeSession),
           keepalive: true
         }).catch(console.error);
         
@@ -269,10 +270,11 @@ export default function TodayPage() {
   }, []);
 
   const saveSessionToApi = async (nextSession: any) => {
+    const { bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, ...safeSession } = nextSession;
     const response = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(nextSession),
+      body: JSON.stringify(safeSession),
     });
 
     if (!response.ok) {

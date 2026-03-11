@@ -130,7 +130,8 @@ export default function HomePage() {
 
       if (needsSave) {
         const payload = {
-          ...currentSess,
+          date: currentSess.date,
+          weekday: currentSess.weekday,
           bodyweight: String(unsubmittedBodyweight) !== String(currentSess.bodyweight || '') ? unsubmittedBodyweight : currentSess.bodyweight,
           waist_circumference: String(unsubmittedWaist) !== String(currentSess.waist_circumference || '') ? unsubmittedWaist : currentSess.waist_circumference,
           calories_carbs: String(unsubmittedCalories) !== String(currentSess.calories_carbs || '') ? unsubmittedCalories : currentSess.calories_carbs,
@@ -247,9 +248,6 @@ export default function HomePage() {
     const existing = todaySession || {
       date: todayStr,
       weekday: getDay(new Date()),
-      set_entries: [],
-      run_entries: [],
-      emom_entries: [],
       bodyweight: null,
       waist_circumference: null,
       calories_protein: null,
@@ -258,7 +256,8 @@ export default function HomePage() {
     };
 
     const payload = {
-      ...existing,
+      date: existing.date,
+      weekday: existing.weekday,
       bodyweight: key === 'bodyweight' ? (parseFloat(bodyweight) || null) : (existing.bodyweight ?? null),
       waist_circumference: key === 'waist' ? (parseFloat(waist) || null) : (existing.waist_circumference ?? null),
       calories_protein: key === 'calories' ? null : (existing.calories_protein ?? null),
