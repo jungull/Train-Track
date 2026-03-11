@@ -84,10 +84,20 @@ export default function HomePage() {
         };
 
         setProgress(normalizedProgress);
-        setTodaySession(sessionData);
-        setBodyweight(sessionData?.bodyweight ? String(sessionData.bodyweight) : '');
-        setWaist(sessionData?.waist_circumference ? String(sessionData.waist_circumference) : '');
-        const totalCalories = (sessionData?.calories_protein || 0) + (sessionData?.calories_carbs || 0) + (sessionData?.calories_fats || 0);
+        
+        let initialSession = sessionData;
+        const cachedStr = sessionStorage.getItem(`homepage-metrics-${todayStr}`);
+        if (cachedStr) {
+          try {
+            const cached = JSON.parse(cachedStr);
+            initialSession = { ...(initialSession || {}), ...cached };
+          } catch(e){}
+        }
+
+        setTodaySession(initialSession);
+        setBodyweight(initialSession?.bodyweight ? String(initialSession.bodyweight) : '');
+        setWaist(initialSession?.waist_circumference ? String(initialSession.waist_circumference) : '');
+        const totalCalories = (initialSession?.calories_protein || 0) + (initialSession?.calories_carbs || 0) + (initialSession?.calories_fats || 0);
         setCalories(totalCalories > 0 ? String(Math.round(totalCalories)) : '');
       } catch (err) {
         console.error(err);
@@ -142,6 +152,8 @@ export default function HomePage() {
           body: JSON.stringify(payload),
           keepalive: true
         }).catch(console.error);
+        
+        sessionStorage.setItem(`homepage-metrics-${todayStr}`, JSON.stringify(payload));
       }
     };
   }, [todayStr]);
@@ -272,6 +284,7 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      sessionStorage.setItem(`homepage-metrics-${todayStr}`, JSON.stringify(payload));
       setTodaySession(payload);
       setProgress((prev: any) => {
         const nextSessions = [...(prev.sessions || [])];
@@ -311,21 +324,21 @@ export default function HomePage() {
         <h2 className="text-sm font-semibold text-zinc-800">Daily check-in</h2>
 
         <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-          <input type="number" step="0.1" value={bodyweight} disabled={hasBodyweight && !editMode.bodyweight} onChange={(e) => setBodyweight(e.target.value)} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasBodyweight && !editMode.bodyweight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Bodyweight (lb)" />
+          <input type="number" step="0.1" value={bodyweight} disabled={hasBodyweight && !editMode.bodyweight} onChange={(e) => setBodyweight(e.target.value)} onBlur={() => { if (!hasBodyweight || editMode.bodyweight) handleMetricAction('bodyweight', hasBodyweight); }} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasBodyweight && !editMode.bodyweight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Bodyweight (lb)" />
           <button onClick={() => handleMetricAction('bodyweight', hasBodyweight)} disabled={savingKey === 'bodyweight'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasBodyweight && !editMode.bodyweight ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
             {savingKey === 'bodyweight' ? 'Saving...' : hasBodyweight && !editMode.bodyweight ? <span className="inline-flex items-center gap-1"><Pencil className="w-3.5 h-3.5" /> Edit</span> : hasBodyweight ? 'Save edit' : 'Submit'}
           </button>
         </div>
 
         <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-          <input type="number" step="0.1" value={waist} disabled={hasWaist && !editMode.waist} onChange={(e) => setWaist(e.target.value)} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasWaist && !editMode.waist ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Waist (in)" />
+          <input type="number" step="0.1" value={waist} disabled={hasWaist && !editMode.waist} onChange={(e) => setWaist(e.target.value)} onBlur={() => { if (!hasWaist || editMode.waist) handleMetricAction('waist', hasWaist); }} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasWaist && !editMode.waist ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Waist (in)" />
           <button onClick={() => handleMetricAction('waist', hasWaist)} disabled={savingKey === 'waist'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasWaist && !editMode.waist ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
             {savingKey === 'waist' ? 'Saving...' : hasWaist && !editMode.waist ? <span className="inline-flex items-center gap-1"><Pencil className="w-3.5 h-3.5" /> Edit</span> : hasWaist ? 'Save edit' : 'Submit'}
           </button>
         </div>
 
         <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-          <input type="number" value={calories} disabled={hasCalories && !editMode.calories} onChange={(e) => setCalories(e.target.value)} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasCalories && !editMode.calories ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Calories" />
+          <input type="number" value={calories} disabled={hasCalories && !editMode.calories} onChange={(e) => setCalories(e.target.value)} onBlur={() => { if (!hasCalories || editMode.calories) handleMetricAction('calories', hasCalories); }} className={`w-full border rounded-lg px-3 py-2 text-sm ${hasCalories && !editMode.calories ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold' : 'bg-zinc-50 border-zinc-200'}`} placeholder="Calories" />
           <button onClick={() => handleMetricAction('calories', hasCalories)} disabled={savingKey === 'calories'} className={`min-w-[92px] px-3 py-2 text-xs rounded-lg border ${hasCalories && !editMode.calories ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white border-zinc-200 text-zinc-700'}`}>
             {savingKey === 'calories' ? 'Saving...' : hasCalories && !editMode.calories ? <span className="inline-flex items-center gap-1"><Pencil className="w-3.5 h-3.5" /> Edit</span> : hasCalories ? 'Save edit' : 'Submit'}
           </button>
