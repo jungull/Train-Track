@@ -60,6 +60,7 @@ export default function TodayPage() {
   const [draggedExercise, setDraggedExercise] = useState<string | null>(null);
   const [savingInline, setSavingInline] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [best1rmData, setBest1rmData] = useState<Record<string, { e1rm: number, date: string, weight: number, reps: number }>>({});
   const sessionRef = useRef<any>(null);
   const inFlightSaveRef = useRef<Promise<void> | null>(null);
 
@@ -96,18 +97,24 @@ export default function TodayPage() {
 
         const sessions = progressData.sessions || [];
         const setEntries = progressData.set_entries || [];
+        const sessionMap = Object.fromEntries(sessions.map((s: any) => [s.id, s.date]));
 
-        const best1rmData: Record<string, number> = {};
+        const best1rmMap: Record<string, { e1rm: number, date: string, weight: number, reps: number }> = {};
         for (const row of setEntries) {
           if (row.weight > 0 && row.reps > 0) {
             const e1rm = row.weight * (1 + row.reps / 30);
-            if (!best1rmData[row.exercise_name] || e1rm > best1rmData[row.exercise_name]) {
-              best1rmData[row.exercise_name] = Math.round(e1rm * 10) / 10;
+            if (!best1rmMap[row.exercise_name] || e1rm > best1rmMap[row.exercise_name].e1rm) {
+              best1rmMap[row.exercise_name] = {
+                e1rm: Math.round(e1rm * 10) / 10,
+                date: sessionMap[row.session_id] || 'Unknown',
+                weight: row.weight,
+                reps: row.reps
+              };
             }
           }
         }
-
-        const sessionMap = Object.fromEntries(sessions.map((s: any) => [s.id, s.date]));
+        setBest1rmData(best1rmMap);
+        
         const sortedEntries = [...setEntries].sort((a, b) => b.id - a.id);
         const seen = new Set<string>();
         const recentData: any[] = [];
@@ -155,9 +162,9 @@ export default function TodayPage() {
             if (item.type === 'circuit') {
               for (const ex of item.exercises) {
                 let prefillWeight: number | null = null;
-                const best1rm = best1rmData[ex.name];
-                if (best1rm && best1rm > 0 && ex.reps > 0) {
-                  const rawWeight = best1rm / (1 + ex.reps / 30);
+                const bestData = best1rmMap[ex.name];
+                if (bestData && bestData.e1rm > 0 && ex.reps > 0) {
+                  const rawWeight = bestData.e1rm / (1 + ex.reps / 30);
                   prefillWeight = Math.round(rawWeight / 5) * 5;
                   if (prefillWeight <= 0) prefillWeight = null;
                 }
@@ -177,9 +184,9 @@ export default function TodayPage() {
               }
             } else {
               let prefillWeight: number | null = null;
-              const best1rm = best1rmData[item.name];
-              if (best1rm && best1rm > 0 && item.reps > 0) {
-                const rawWeight = best1rm / (1 + item.reps / 30);
+              const bestData = best1rmMap[item.name];
+              if (bestData && bestData.e1rm > 0 && item.reps > 0) {
+                const rawWeight = bestData.e1rm / (1 + item.reps / 30);
                 prefillWeight = Math.round(rawWeight / 5) * 5;
                 if (prefillWeight <= 0) prefillWeight = null;
               }
@@ -389,14 +396,49 @@ export default function TodayPage() {
   };
 
   const getRecommendation = (exerciseName: string) => {
-    const recent = recentExercises.find(e => e.exercise_name === exerciseName);
-    if (!recent) return null;
+    const isCalisthenic = /pull.*up|push.*up|chin.*up|dip/.test(exerciseName.toLowerCase());
+    const isPlank = exerciseName.toLowerCase().includes('plank');
+    if (isCalisthenic || isPlank) {
+      const recent = recentExercises.find(e => e.exercise_name === exerciseName);
+      if (!recent) return null;
+      return {
+        type: 'calisthenics',
+        title: `Last (${recent.date.substring(5)})`,
+        value: `${isPlank ? recent.reps + 's (duration)' : recent.reps + ' reps'}`
+      };
+    }
+    
+    const bestRecord = best1rmData[exerciseName];
+    if (!bestRecord) {
+      const recent = recentExercises.find(e => e.exercise_name === exerciseName);
+      if (!recent) return null;
+      const recWeight = recent.weight > 0 ? recent.weight + 5 : 0;
+      return {
+        type: 'recent',
+        last: `${recent.weight > 0 ? `${recent.weight}lb × ` : ''}${recent.reps} reps`,
+        rec: `${recWeight > 0 ? `${recWeight}lb × ` : ''}${recent.reps} reps`,
+        date: recent.date.substring(5)
+      };
+    }
 
-    const recWeight = recent.weight > 0 ? recent.weight + 5 : 0;
+    const { e1rm, date, weight, reps } = bestRecord;
+    const target1rm = e1rm * 1.05; // 5% increase
+    
+    // Reverse Brzycki: Weight = e1RM / (1 + Reps/30)
+    const raw4 = target1rm / (1 + 4 / 30);
+    const raw7 = target1rm / (1 + 7 / 30);
+    const raw10 = target1rm / (1 + 10 / 30);
+    
+    const t4 = Math.round(raw4 / 5) * 5;
+    const t7 = Math.round(raw7 / 5) * 5;
+    const t10 = Math.round(raw10 / 5) * 5;
+
     return {
-      last: `${recent.weight > 0 ? `${recent.weight}lb × ` : ''}${recent.reps} reps`,
-      rec: `${recWeight > 0 ? `${recWeight}lb × ` : ''}${recent.reps} reps`,
-      date: recent.date.substring(5)
+      type: '1rm',
+      best1rm: `${Math.round(e1rm)}lb`,
+      origin: `${weight}lb × ${reps} reps`,
+      date: date.substring(5),
+      t4, t7, t10
     };
   };
 
@@ -470,9 +512,36 @@ export default function TodayPage() {
                     {rec && (
                       <div className="flex items-start gap-2 bg-blue-50/50 border border-blue-100/50 rounded-lg p-3 text-xs">
                         <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                          <p className="text-blue-900/80"><span className="font-semibold">Last ({rec.date}):</span> {rec.last}</p>
-                          <p className="text-blue-900/80"><span className="font-semibold">Target:</span> {rec.rec}</p>
+                        <div className="space-y-1.5 w-full pr-1">
+                          {rec.type === '1rm' ? (
+                            <>
+                              <div className="flex items-center justify-between pb-1 mb-1 border-b border-blue-100/50">
+                                <p className="text-blue-900/80"><span className="font-semibold text-blue-900">Best e1RM:</span> {rec.best1rm} <span className="text-[10px] text-blue-500 opacity-75">({rec.origin} on {rec.date})</span></p>
+                              </div>
+                              <p className="text-[10px] font-semibold tracking-wider text-blue-900/60 uppercase">Target weight (+5%)</p>
+                              <div className="grid grid-cols-3 gap-2 mt-1">
+                                <div className="bg-white/60 rounded px-2 py-1 text-center">
+                                  <span className="block font-bold text-blue-900">{rec.t4}lb</span>
+                                  <span className="text-[10px] text-blue-700/70">for 4</span>
+                                </div>
+                                <div className="bg-white/60 rounded px-2 py-1 text-center">
+                                  <span className="block font-bold text-blue-900">{rec.t7}lb</span>
+                                  <span className="text-[10px] text-blue-700/70">for 7</span>
+                                </div>
+                                <div className="bg-white/60 rounded px-2 py-1 text-center">
+                                  <span className="block font-bold text-blue-900">{rec.t10}lb</span>
+                                  <span className="text-[10px] text-blue-700/70">for 10</span>
+                                </div>
+                              </div>
+                            </>
+                          ) : rec.type === 'calisthenics' ? (
+                            <p className="text-blue-900/80"><span className="font-semibold">{rec.title}:</span> {rec.value}</p>
+                          ) : (
+                            <>
+                              <p className="text-blue-900/80"><span className="font-semibold">Last ({rec.date}):</span> {rec.last}</p>
+                              <p className="text-blue-900/80"><span className="font-semibold">Target:</span> {rec.rec}</p>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
