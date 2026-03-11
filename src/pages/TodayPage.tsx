@@ -254,8 +254,8 @@ export default function TodayPage() {
   }, [session]);
 
   useEffect(() => {
-    return () => {
-      if (sessionRef.current) {
+    const saveOnUnload = () => {
+      if (sessionRef.current && (document.visibilityState === 'hidden' || !document.visibilityState)) {
         const { bodyweight, waist_circumference, calories_protein, calories_carbs, calories_fats, notes, ...safeSession } = sessionRef.current;
         fetch('/api/sessions', {
           method: 'POST',
@@ -266,6 +266,13 @@ export default function TodayPage() {
         
         sessionStorage.setItem(`today-session-${sessionRef.current.date}`, JSON.stringify(sessionRef.current));
       }
+    };
+
+    document.addEventListener('visibilitychange', saveOnUnload);
+    return () => {
+      document.removeEventListener('visibilitychange', saveOnUnload);
+      // Fallback on normal unmount
+      saveOnUnload();
     };
   }, []);
 

@@ -136,7 +136,9 @@ export default function HomePage() {
   }, [bodyweight, waist, calories, todaySession]);
 
   useEffect(() => {
-    return () => {
+    const saveOnUnload = () => {
+      if (document.visibilityState === 'visible') return;
+      
       const currentSess = sessionRef.current || { 
         date: todayStr, weekday: getDay(new Date()), 
         set_entries: [], run_entries: [], emom_entries: [], 
@@ -170,6 +172,12 @@ export default function HomePage() {
         
         sessionStorage.setItem(`homepage-metrics-${todayStr}`, JSON.stringify(payload));
       }
+    };
+
+    document.addEventListener('visibilitychange', saveOnUnload);
+    return () => {
+      document.removeEventListener('visibilitychange', saveOnUnload);
+      saveOnUnload();
     };
   }, [todayStr]);
 
