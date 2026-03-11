@@ -86,12 +86,27 @@ export default function HomePage() {
         setProgress(normalizedProgress);
         
         let initialSession = sessionData;
-        const cachedStr = sessionStorage.getItem(`homepage-metrics-${todayStr}`);
-        if (cachedStr) {
-          try {
-            const cached = JSON.parse(cachedStr);
-            initialSession = { ...(initialSession || {}), ...cached };
-          } catch(e){}
+        
+        const cachedHomeStr = sessionStorage.getItem(`homepage-metrics-${todayStr}`);
+        const cachedTodayStr = sessionStorage.getItem(`today-session-${todayStr}`);
+        let mergedCache: any = {};
+        
+        if (cachedTodayStr) {
+          try { mergedCache = { ...mergedCache, ...JSON.parse(cachedTodayStr) }; } catch(e){}
+        }
+        if (cachedHomeStr) {
+          try { mergedCache = { ...mergedCache, ...JSON.parse(cachedHomeStr) }; } catch(e){}
+        }
+
+        if (Object.keys(mergedCache).length > 0) {
+          initialSession = { ...(initialSession || {}), ...mergedCache };
+          
+          const sIdx = normalizedProgress.sessions.findIndex((s: any) => s.date === todayStr);
+          if (sIdx >= 0) {
+            normalizedProgress.sessions[sIdx] = { ...normalizedProgress.sessions[sIdx], ...mergedCache };
+          } else {
+            normalizedProgress.sessions.push({ ...mergedCache, date: todayStr });
+          }
         }
 
         setTodaySession(initialSession);
