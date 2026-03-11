@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { format, subDays, getDay, parseISO } from 'date-fns';
+import { format, subDays, getDay, parseISO, differenceInCalendarDays } from 'date-fns';
 import { ChevronLeft, ListTodo, Plus, Check, Info, ChevronDown, ChevronUp, Trash2, GripVertical } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -87,7 +87,7 @@ export default function TodayPage() {
       try {
         const [todayRes, programRes, progressRes] = await Promise.all([
           fetch(`/api/sessions?date=${dateStr}`),
-          fetch('/api/program'),
+          fetch('/api/programs'),
           fetch('/api/progress')
         ]);
 
@@ -130,8 +130,20 @@ export default function TodayPage() {
           }
         }
 
-        const todayProgram = programData.find((p: any) => p.weekday === weekday);
-        if (todayProgram && todayProgram.exercises) {
+        const activeProg = programData.find((p: any) => p.is_active);
+        let todayProgram = null;
+        if (activeProg && activeProg.anchor_date) {
+          const anchorDate = parseISO(activeProg.anchor_date);
+          const targetDate = parseISO(dateStr);
+          let diffDays = differenceInCalendarDays(targetDate, anchorDate);
+          
+          const cycleLength = (activeProg.cycle_weeks || 1) * 7;
+          diffDays = ((diffDays % cycleLength) + cycleLength) % cycleLength; // Handle negative offsets gracefully
+          
+          todayProgram = activeProg.days?.find((d: any) => d.day_index === diffDays);
+        }
+
+        if (todayProgram && typeof todayProgram.exercises === 'string') {
           todayProgram.exercises = JSON.parse(todayProgram.exercises);
         }
         setProgram(todayProgram);
