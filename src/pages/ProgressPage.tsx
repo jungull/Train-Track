@@ -296,17 +296,49 @@ export default function ProgressPage() {
     if (!cellEntries || cellEntries.length === 0) return <span className="text-zinc-300">—</span>;
 
     if (category === 'strength' || category === 'bodyweight') {
+      const exName = cellEntries[0].exercise_name?.toLowerCase() || '';
+      const numSets = cellEntries.length;
+      
+      if (exName.includes('plank')) {
+        const totalDuration = cellEntries.reduce((sum, e) => sum + (e.reps || 0), 0);
+        return <span className="text-zinc-700">{numSets}s {totalDuration}s</span>;
+      }
+      
+      const isCalisthenic = /pull.*up|push.*up|chin.*up|dip/.test(exName);
+      if (isCalisthenic) {
+        const hasWeight = cellEntries.some(e => (e.weight && e.weight > 0) || (e.exercise_name?.toLowerCase().includes('weighted')));
+        if (!hasWeight) {
+          const totalReps = cellEntries.reduce((sum, e) => sum + (e.reps || 0), 0);
+          return <span className="text-zinc-700">{numSets}s {totalReps}r</span>;
+        }
+      }
+      
       const bestSet = cellEntries.reduce((best, current) => {
-        const bestVol = (best.weight || 1) * (best.reps || 1);
-        const currVol = (current.weight || 1) * (current.reps || 1);
+        const bestVol = (best.weight || 0) * (best.reps || 0);
+        const currVol = (current.weight || 0) * (current.reps || 0);
         return currVol > bestVol ? current : best;
       }, cellEntries[0]);
 
+      const max1RM = cellEntries.reduce((max, e) => {
+        const w = e.weight || 0;
+        const r = e.reps || 0;
+        if (w > 0 && r > 0) return Math.max(max, w * (1 + r / 30));
+        return Math.max(max, w);
+      }, 0);
+
+      if (max1RM > 0) {
+        return (
+          <span className="text-zinc-700" title={`Best set: ${bestSet.weight}lb x ${bestSet.reps}`}>
+            {numSets}s {Math.round(max1RM)}lb <span className="text-[10px] text-zinc-400">e1RM</span>
+          </span>
+        );
+      }
+
       const parts = [];
-      if (cellEntries.length > 1) parts.push(`${cellEntries.length}s`);
+      if (numSets > 1) parts.push(`${numSets}s`);
       if (bestSet.weight) parts.push(`${bestSet.weight}lb`);
       if (bestSet.reps) parts.push(`${bestSet.reps}r`);
-      if (!bestSet.weight && !bestSet.reps && cellEntries.length === 1) return <span className="text-zinc-700">Done</span>;
+      if (!bestSet.weight && !bestSet.reps && numSets === 1) return <span className="text-zinc-700">Done</span>;
       return <span className="text-zinc-700">{parts.join(' ')}</span>;
     }
 
