@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, getDay } from 'date-fns';
 import { Pencil } from 'lucide-react';
@@ -96,6 +96,53 @@ export default function HomePage() {
       }
     }
     load();
+  }, [todayStr]);
+
+  const bodyweightRef = useRef(bodyweight);
+  const waistRef = useRef(waist);
+  const caloriesRef = useRef(calories);
+  const sessionRef = useRef(todaySession);
+
+  useEffect(() => {
+    bodyweightRef.current = bodyweight;
+    waistRef.current = waist;
+    caloriesRef.current = calories;
+    sessionRef.current = todaySession;
+  }, [bodyweight, waist, calories, todaySession]);
+
+  useEffect(() => {
+    return () => {
+      const currentSess = sessionRef.current || { 
+        date: todayStr, weekday: getDay(new Date()), 
+        set_entries: [], run_entries: [], emom_entries: [], 
+        bodyweight: null, waist_circumference: null, 
+        calories_protein: null, calories_carbs: null, calories_fats: null 
+      };
+      
+      const unsubmittedBodyweight = parseFloat(bodyweightRef.current) || null;
+      const unsubmittedWaist = parseFloat(waistRef.current) || null;
+      const unsubmittedCalories = parseInt(caloriesRef.current) || null;
+
+      const needsSave = 
+        unsubmittedBodyweight !== currentSess.bodyweight ||
+        unsubmittedWaist !== currentSess.waist_circumference ||
+        unsubmittedCalories !== currentSess.calories_carbs;
+
+      if (needsSave) {
+        const payload = {
+          ...currentSess,
+          bodyweight: String(unsubmittedBodyweight) !== String(currentSess.bodyweight || '') ? unsubmittedBodyweight : currentSess.bodyweight,
+          waist_circumference: String(unsubmittedWaist) !== String(currentSess.waist_circumference || '') ? unsubmittedWaist : currentSess.waist_circumference,
+          calories_carbs: String(unsubmittedCalories) !== String(currentSess.calories_carbs || '') ? unsubmittedCalories : currentSess.calories_carbs,
+        };
+        fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(console.error);
+      }
+    };
   }, [todayStr]);
 
   const sessionDateMap = useMemo(

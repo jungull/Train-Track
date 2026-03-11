@@ -61,7 +61,41 @@ export default function ProgressPage() {
     try {
       const res = await fetch('/api/progress');
       const json = await res.json();
-      const { sessions: s, set_entries, run_entries, emom_entries } = json;
+      let { sessions: s, set_entries, run_entries, emom_entries } = json;
+
+      const d = new Date();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const safeTodayStr = `${d.getFullYear()}-${mm}-${dd}`;
+      
+      const localSessStr = sessionStorage.getItem(`today-session-${safeTodayStr}`);
+      if (localSessStr) {
+        try {
+          const localSess = JSON.parse(localSessStr);
+          const sIndex = s.findIndex((x: any) => x.date === safeTodayStr);
+          let localSessionId = 9999999;
+          
+          if (sIndex >= 0) {
+            localSessionId = s[sIndex].id;
+            s[sIndex] = { ...s[sIndex], ...localSess, id: localSessionId };
+          } else {
+            s.push({ ...localSess, id: localSessionId, date: safeTodayStr });
+          }
+
+          set_entries = (set_entries || []).filter((entry: any) => entry.session_id !== localSessionId);
+          
+          if (localSess.set_entries && localSess.set_entries.length > 0) {
+            const localSetsWithId = localSess.set_entries.map((e: any, i: number) => ({
+              ...e,
+              session_id: localSessionId,
+              id: 9000000 + i
+            }));
+            set_entries.push(...localSetsWithId);
+          }
+        } catch (e) {
+           console.error('Failed to parse local session', e);
+        }
+      }
 
       setSessions(s);
 

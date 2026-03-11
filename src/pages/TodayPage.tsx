@@ -224,9 +224,49 @@ export default function TodayPage() {
   }, [dateStr, weekday, localSessionKey]);
 
 
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     sessionRef.current = session;
+    if (session) {
+      sessionStorage.setItem(localSessionKey, JSON.stringify(session));
+    }
+  }, [session, localSessionKey]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const handler = setTimeout(async () => {
+      setSavingInline(true);
+      try {
+        await saveSessionToApi(session);
+        window.dispatchEvent(new CustomEvent('workout-log-updated', { detail: { date: session.date } }));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setSavingInline(false);
+      }
+    }, 1200);
+    return () => clearTimeout(handler);
   }, [session]);
+
+  useEffect(() => {
+    return () => {
+      if (sessionRef.current) {
+        fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sessionRef.current),
+          keepalive: true
+        }).catch(console.error);
+        
+        sessionStorage.setItem(`today-session-${sessionRef.current.date}`, JSON.stringify(sessionRef.current));
+      }
+    };
+  }, []);
 
   const saveSessionToApi = async (nextSession: any) => {
     const response = await fetch('/api/sessions', {
