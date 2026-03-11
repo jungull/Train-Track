@@ -87,8 +87,8 @@ export default function HomePage() {
         
         let initialSession = sessionData;
         
-        const cachedHomeStr = sessionStorage.getItem(`homepage-metrics-${todayStr}`);
-        const cachedTodayStr = sessionStorage.getItem(`today-session-${todayStr}`);
+        const cachedHomeStr = localStorage.getItem(`homepage-metrics-${todayStr}`);
+        const cachedTodayStr = localStorage.getItem(`today-session-${todayStr}`);
         let mergedCache: any = {};
         
         if (cachedTodayStr) {
@@ -170,7 +170,7 @@ export default function HomePage() {
           keepalive: true
         }).catch(console.error);
         
-        sessionStorage.setItem(`homepage-metrics-${todayStr}`, JSON.stringify(payload));
+        localStorage.setItem(`homepage-metrics-${todayStr}`, JSON.stringify(payload));
       }
     };
 
@@ -307,7 +307,7 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      sessionStorage.setItem(`homepage-metrics-${todayStr}`, JSON.stringify(payload));
+      localStorage.setItem(`homepage-metrics-${todayStr}`, JSON.stringify(payload));
       setTodaySession(payload);
       setProgress((prev: any) => {
         const nextSessions = [...(prev.sessions || [])];

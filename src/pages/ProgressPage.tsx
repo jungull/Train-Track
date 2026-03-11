@@ -44,9 +44,9 @@ export default function ProgressPage() {
   const [entries, setEntries] = useState<ExerciseLogEntry[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('progress-active-tab') || 'strength');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('progress-active-tab') || 'strength');
   const [viewMode, setViewMode] = useState<'log' | 'trends'>(() => {
-    const saved = sessionStorage.getItem('progress-view-mode');
+    const saved = localStorage.getItem('progress-view-mode');
     return saved === 'trends' ? 'trends' : 'log';
   });
 
@@ -68,8 +68,8 @@ export default function ProgressPage() {
       const dd = String(d.getDate()).padStart(2, '0');
       const safeTodayStr = `${d.getFullYear()}-${mm}-${dd}`;
       
-      const localSessStr = sessionStorage.getItem(`today-session-${safeTodayStr}`);
-      const homeSessStr = sessionStorage.getItem(`homepage-metrics-${safeTodayStr}`);
+      const localSessStr = localStorage.getItem(`today-session-${safeTodayStr}`);
+      const homeSessStr = localStorage.getItem(`homepage-metrics-${safeTodayStr}`);
       let localSess: any = {};
 
       if (localSessStr) {
@@ -171,11 +171,11 @@ export default function ProgressPage() {
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem('progress-active-tab', activeTab);
+    localStorage.setItem('progress-active-tab', activeTab);
   }, [activeTab]);
 
   useEffect(() => {
-    sessionStorage.setItem('progress-view-mode', viewMode);
+    localStorage.setItem('progress-view-mode', viewMode);
   }, [viewMode]);
 
   const handleRename = async (oldName: string) => {

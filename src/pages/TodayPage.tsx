@@ -68,7 +68,7 @@ export default function TodayPage() {
   const localSessionKey = `today-session-${dateStr}`;
 
   useEffect(() => {
-    const cached = sessionStorage.getItem(localSessionKey);
+    const cached = localStorage.getItem(localSessionKey);
     if (!cached) return;
     try {
       const parsed = JSON.parse(cached);
@@ -131,7 +131,7 @@ export default function TodayPage() {
         setRecentExercises(recentData);
 
         if (todayData) {
-          const cached = sessionStorage.getItem(localSessionKey);
+          const cached = localStorage.getItem(localSessionKey);
           let nextSession = todayData;
           if (cached) {
             try {
@@ -148,7 +148,7 @@ export default function TodayPage() {
             }
           }
           setSession(nextSession);
-          sessionStorage.setItem(localSessionKey, JSON.stringify(nextSession));
+          localStorage.setItem(localSessionKey, JSON.stringify(nextSession));
         } else {
           const initialSets: any[] = [];
           for (const item of (todayProgram?.exercises || [])) {
@@ -212,7 +212,7 @@ export default function TodayPage() {
             emom_entries: []
           };
           setSession(createdSession);
-          sessionStorage.setItem(localSessionKey, JSON.stringify(createdSession));
+          localStorage.setItem(localSessionKey, JSON.stringify(createdSession));
         }
       } catch (err) {
         console.error(err);
@@ -229,7 +229,7 @@ export default function TodayPage() {
   useEffect(() => {
     sessionRef.current = session;
     if (session) {
-      sessionStorage.setItem(localSessionKey, JSON.stringify(session));
+      localStorage.setItem(localSessionKey, JSON.stringify(session));
     }
   }, [session, localSessionKey]);
 
@@ -264,7 +264,7 @@ export default function TodayPage() {
           keepalive: true
         }).catch(console.error);
         
-        sessionStorage.setItem(`today-session-${sessionRef.current.date}`, JSON.stringify(sessionRef.current));
+        localStorage.setItem(`today-session-${sessionRef.current.date}`, JSON.stringify(sessionRef.current));
       }
     };
 
@@ -316,7 +316,7 @@ export default function TodayPage() {
   const persistSession = async (nextSession: any) => {
     setSession(nextSession);
     sessionRef.current = nextSession;
-    sessionStorage.setItem(localSessionKey, JSON.stringify(nextSession));
+    localStorage.setItem(localSessionKey, JSON.stringify(nextSession));
     setSavingInline(true);
     const savePromise = saveSessionToApi(nextSession);
     inFlightSaveRef.current = savePromise;
