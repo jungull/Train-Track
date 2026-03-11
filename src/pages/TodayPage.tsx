@@ -65,6 +65,20 @@ export default function TodayPage() {
 
   const dateStr = format(date, 'yyyy-MM-dd');
   const weekday = getDay(date);
+  const localSessionKey = `today-session-${dateStr}`;
+
+  useEffect(() => {
+    const cached = sessionStorage.getItem(localSessionKey);
+    if (!cached) return;
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed?.date === dateStr && Array.isArray(parsed?.set_entries)) {
+        setSession(parsed);
+      }
+    } catch (err) {
+      console.error('Failed to parse cached today session', err);
+    }
+  }, [dateStr, localSessionKey]);
 
   useEffect(() => {
     async function fetchData() {
@@ -117,7 +131,24 @@ export default function TodayPage() {
         setRecentExercises(recentData);
 
         if (todayData) {
-          setSession(todayData);
+          const cached = sessionStorage.getItem(localSessionKey);
+          let nextSession = todayData;
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              if (parsed?.date === todayData.date) {
+                const loggedFromServer = (todayData.set_entries || []).filter((entry: any) => Boolean(entry.logged)).length;
+                const loggedFromCache = (parsed.set_entries || []).filter((entry: any) => Boolean(entry.logged)).length;
+                if (loggedFromCache > loggedFromServer) {
+                  nextSession = parsed;
+                }
+              }
+            } catch {
+              // Ignore invalid cache
+            }
+          }
+          setSession(nextSession);
+          sessionStorage.setItem(localSessionKey, JSON.stringify(nextSession));
         } else {
           const initialSets: any[] = [];
           for (const item of (todayProgram?.exercises || [])) {
@@ -168,7 +199,7 @@ export default function TodayPage() {
             }
           }
 
-          setSession({
+          const createdSession = {
             date: dateStr,
             weekday,
             bodyweight: null,
@@ -179,7 +210,9 @@ export default function TodayPage() {
             set_entries: initialSets,
             run_entries: [],
             emom_entries: []
-          });
+          };
+          setSession(createdSession);
+          sessionStorage.setItem(localSessionKey, JSON.stringify(createdSession));
         }
       } catch (err) {
         console.error(err);
@@ -188,7 +221,7 @@ export default function TodayPage() {
       }
     }
     fetchData();
-  }, [dateStr, weekday]);
+  }, [dateStr, weekday, localSessionKey]);
 
 
   useEffect(() => {
@@ -234,6 +267,7 @@ export default function TodayPage() {
   const persistSession = async (nextSession: any) => {
     setSession(nextSession);
     sessionRef.current = nextSession;
+    sessionStorage.setItem(localSessionKey, JSON.stringify(nextSession));
     setSavingInline(true);
     const savePromise = saveSessionToApi(nextSession);
     inFlightSaveRef.current = savePromise;

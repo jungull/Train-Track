@@ -172,12 +172,18 @@ export default function ProgressPage() {
       dates.add(entry.date);
     });
 
+    sessions.forEach((session) => {
+      if (session?.date) {
+        dates.add(session.date);
+      }
+    });
+
     return {
       grouped: g,
       sortedDates: Array.from(dates).sort((a, b) => b.localeCompare(a)),
       categories: Object.keys(g).sort()
     };
-  }, [entries]);
+  }, [entries, sessions]);
 
   // Trends Calculation
   const weightTrendData = useMemo(() => {
