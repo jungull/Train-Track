@@ -191,6 +191,8 @@ export default function TodayPage() {
                     category: ex.category || 'strength',
                     distance: ex.distance || null,
                     duration_seconds: ex.duration ? (ex.category === 'run' ? ex.duration * 60 : ex.duration) : null,
+                    logged: 0,
+                    logged_at: null,
                   });
                 }
               }
@@ -213,6 +215,8 @@ export default function TodayPage() {
                   category: item.category || 'strength',
                   distance: item.distance || null,
                   duration_seconds: item.duration ? (item.category === 'run' ? item.duration * 60 : item.duration) : null,
+                  logged: 0,
+                  logged_at: null,
                 });
               }
             }
@@ -721,7 +725,7 @@ export default function TodayPage() {
                           const lastSet = sets[sets.length - 1];
                           const next = {
                             ...session,
-                            set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: ex, set_index: sets.length + 1, weight: lastSet?.weight || null, reps: lastSet?.reps || null, rpe: null, category: lastSet?.category || 'strength', distance: lastSet?.distance || null, duration_seconds: lastSet?.duration_seconds || null }]
+                            set_entries: [...(session.set_entries || []), { block_title: program?.title || 'Custom', exercise_name: ex, set_index: sets.length + 1, weight: lastSet?.weight || null, reps: lastSet?.reps || null, rpe: null, category: lastSet?.category || 'strength', distance: lastSet?.distance || null, duration_seconds: lastSet?.duration_seconds || null, logged: 0, logged_at: null }]
                           };
                           await persistSession(next);
                         }}

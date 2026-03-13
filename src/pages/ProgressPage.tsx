@@ -106,9 +106,7 @@ export default function ProgressPage() {
 
       const sessionMap = Object.fromEntries(s.map((sess: any) => [sess.id, sess.date]));
 
-      const loggedSetEntries = (set_entries || []).filter((e: any) =>
-        e.logged === undefined || e.logged === null || Number(e.logged) === 1
-      );
+      const loggedSetEntries = (set_entries || []).filter((e: any) => Number(e.logged) === 1);
 
       const unified: ExerciseLogEntry[] = [
         ...loggedSetEntries.map((e: any) => ({ ...e, date: sessionMap[e.session_id] || 'Unknown' })),
