@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { House, Dumbbell, Zap, ListTodo, Timer, LineChart, Settings } from 'lucide-react';
+import { House, Dumbbell, Zap, ListTodo, Timer, LineChart, Settings, Wrench } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -12,6 +12,7 @@ import ProgramPage from './pages/ProgramPage';
 import ToolsPage from './pages/ToolsPage';
 import ProgressPage from './pages/ProgressPage';
 import SettingsPage from './pages/SettingsPage';
+import BuilderPage from './pages/BuilderPage';
 import GTGManager from './components/GTGManager';
 
 export function cn(...inputs: ClassValue[]) {
@@ -48,6 +49,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <NavItem to="/program" icon={<ListTodo />} label="Program" />
           <NavItem to="/tools" icon={<Timer />} label="Tools" />
           <NavItem to="/progress" icon={<LineChart />} label="Log" />
+          <NavItem to="/builder" icon={<Wrench />} label="Build" />
           <NavItem to="/settings" icon={<Settings />} label="Settings" />
         </div>
       </nav>
@@ -86,6 +88,7 @@ export default function App() {
           <Route path="/program" element={<ProgramPage />} />
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/progress" element={<ProgressPage />} />
+          <Route path="/builder" element={<BuilderPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Layout>
